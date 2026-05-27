@@ -155,13 +155,10 @@ class _LoginState extends State<Login> {
                             SizedBox(height: 24),
 
                             Center(
-                              // Bungkus dengan Center agar posisinya di tengah layar
                               child: Text.rich(
                                 TextSpan(
                                   text: 'Belum punya akun? ',
-                                  style: theme
-                                      .textTheme
-                                      .bodyMedium, // Gaya untuk teks biasa
+                                  style: theme.textTheme.bodyMedium,
                                   children: [
                                     TextSpan(
                                       text: 'Daftar',
@@ -170,7 +167,7 @@ class _LoginState extends State<Login> {
                                             fontWeight: FontWeight.bold,
                                             color: theme.primaryColor,
                                           ),
-                                      // 👇 Pasang recognizer yang sudah kita buat tadi
+
                                       recognizer: _registerTapRecognizer,
                                     ),
                                   ],
