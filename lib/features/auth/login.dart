@@ -1,4 +1,6 @@
 import 'package:dukunsaldo_fe/core/constants/app_assets.dart';
+import 'package:dukunsaldo_fe/database/preference.dart';
+import 'package:dukunsaldo_fe/features/home/home_screen.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../../core/widgets/custom_text_field.dart';
@@ -14,6 +16,8 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
   late TapGestureRecognizer _registerTapRecognizer;
@@ -137,11 +141,15 @@ class _LoginState extends State<Login> {
                               isLoading: _isLoading,
 
                               onPressed: () async {
+                                await Preference.setLogin(true);
                                 setState(() {
                                   _isLoading = true;
                                 });
-                                print(
-                                  "Mencoba login dengan Email: ${_emailController.text}",
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const HomePage(),
+                                  ),
                                 );
                                 await Future.delayed(
                                   const Duration(seconds: 2),

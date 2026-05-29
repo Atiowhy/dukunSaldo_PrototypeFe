@@ -1,5 +1,7 @@
 import 'package:dukunsaldo_fe/core/constants/app_assets.dart';
+import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/features/auth/login.dart';
+import 'package:dukunsaldo_fe/features/home/home_screen.dart';
 // import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 
@@ -20,10 +22,16 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _navigateToNextScreen() async {
     await Future.delayed(const Duration(seconds: 3));
 
-    if (mounted) {
+    if (!mounted) return;
+    if (!Preference.isLogin) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const Login()),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomePage()),
       );
     }
   }

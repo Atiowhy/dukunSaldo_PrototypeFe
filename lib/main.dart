@@ -1,10 +1,15 @@
+import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/features/auth/splassh_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'core/constants/app_colors.dart';
 import 'core/providers/theme_provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting("id_id", null);
+  await Preference.init();
   runApp(
     ChangeNotifierProvider(
       create: (context) => ThemeProvider(),
@@ -48,7 +53,7 @@ class MyApp extends StatelessWidget {
             backgroundColor: AppColors.lightPrimaryButtonColor,
             foregroundColor: AppColors.lightButtonTextColor,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadiusGeometry.circular(12),
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
         ),
