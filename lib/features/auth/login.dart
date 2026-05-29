@@ -25,11 +25,10 @@ class _LoginState extends State<Login> {
   @override
   void initState() {
     super.initState();
-    // 👇 2. Inisialisasi fungsi kliknya di sini
+
     _registerTapRecognizer = TapGestureRecognizer()
       ..onTap = () {
         print("Pergi ke halaman Register");
-        // Nanti kode Navigator ke RegisterScreen ditaruh di sini
       };
   }
 
@@ -99,37 +98,62 @@ class _LoginState extends State<Login> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("Email", style: theme.textTheme.bodyLarge),
-                                SizedBox(height: 16),
-                                CustomTextField(
-                                  labelText: "Email",
-                                  hintText: "Masukkan Email Anda",
-                                  prefixIcon: Icons.email,
-                                  controller: _emailController,
-                                  keyboardType: TextInputType.emailAddress,
-                                ),
-                                SizedBox(height: 16),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Password",
-                                      style: theme.textTheme.bodyLarge,
+                                Container(
+                                  padding: EdgeInsets.all(8),
+                                  child: Form(
+                                    key: _formKey,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Email",
+                                          style: theme.textTheme.bodyLarge,
+                                        ),
+                                        SizedBox(height: 16),
+                                        CustomTextField(
+                                          labelText: "Email",
+                                          hintText: "Masukkan Email Anda",
+                                          prefixIcon: Icons.email,
+                                          controller: _emailController,
+                                          keyboardType:
+                                              TextInputType.emailAddress,
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return "Email Tidak Boleh Kosong";
+                                            } else if (!value.contains("@")) {
+                                              return "Format Email Tidak Valid";
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        SizedBox(height: 16),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              "Password",
+                                              style: theme.textTheme.bodyLarge,
+                                            ),
+                                            Text(
+                                              "Lupa Kata Sandi?",
+                                              style: theme.textTheme.bodyLarge,
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: 16),
+                                        CustomTextField(
+                                          labelText: "Password",
+                                          hintText: "Masukkan Password Anda",
+                                          prefixIcon: Icons.lock,
+                                          controller: _passwordController,
+                                          isPassword: true,
+                                        ),
+                                      ],
                                     ),
-                                    Text(
-                                      "Lupa Kata Sandi?",
-                                      style: theme.textTheme.bodyLarge,
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 16),
-                                CustomTextField(
-                                  labelText: "Password",
-                                  hintText: "Masukkan Password Anda",
-                                  prefixIcon: Icons.lock,
-                                  controller: _passwordController,
-                                  isPassword: true,
+                                  ),
                                 ),
                               ],
                             ),
@@ -149,6 +173,11 @@ class _LoginState extends State<Login> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => const HomePage(),
+                                    settings: RouteSettings(
+                                      arguments: {
+                                        "email": _emailController.text,
+                                      },
+                                    ),
                                   ),
                                 );
                                 await Future.delayed(

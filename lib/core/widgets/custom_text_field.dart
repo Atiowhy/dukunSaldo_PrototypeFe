@@ -10,6 +10,7 @@ class CustomTextField extends StatefulWidget {
   final TextEditingController controller;
   final bool isPassword;
   final TextInputType keyboardType;
+  final String? Function(String?)? validator;
 
   const CustomTextField({
     super.key,
@@ -19,6 +20,7 @@ class CustomTextField extends StatefulWidget {
     required this.controller,
     this.isPassword = false,
     this.keyboardType = TextInputType.text,
+    this.validator,
   });
 
   @override
@@ -34,7 +36,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
     return TextFormField(
       controller: widget.controller,
-
+      validator: widget.validator,
       obscureText: widget.isPassword ? _isObscured : false,
       keyboardType: widget.keyboardType,
       style: theme.textTheme.bodyLarge,
