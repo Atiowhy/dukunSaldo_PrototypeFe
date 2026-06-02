@@ -1,22 +1,25 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Preference {
-  static late SharedPreferences _prefs;
+  static SharedPreferences? _prefs;
+
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
   }
 
-  static const _keyIsLogin = "isLogin";
+  static bool get isLogin => _prefs?.getBool('isLogin') ?? false;
 
-  static Future<void> setLogin(bool isLogin) async {
-    await _prefs.setBool(_keyIsLogin, isLogin);
+  static String get username => _prefs?.getString('username') ?? 'Guest';
+  static String get email => _prefs?.getString('email') ?? '';
+
+  static Future<void> saveUserSession(String name, String email) async {
+    await _prefs?.setBool('isLogin', true);
+    await _prefs?.setString('username', name);
+    await _prefs?.setString('email', email);
   }
 
-  static bool get isLogin {
-    return _prefs.getBool(_keyIsLogin) ?? false;
-  }
-
+  // Fungsi hapus sesi saat LOGOUT
   static Future<void> logOut() async {
-    await _prefs.remove(_keyIsLogin);
+    await _prefs?.clear();
   }
 }

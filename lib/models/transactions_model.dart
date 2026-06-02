@@ -1,76 +1,39 @@
-// ============================================================
-// DUKUN SALDO - Dummy Data Riwayat Transaksi
-// ============================================================
-
-// ============================================================
-// ENUM
-// ============================================================
-
-enum TransactionType { income, expense }
-
-enum TransactionCategory {
-  belanjaBulanan,
-  makanMinum,
-  transportasi,
-  tagihan,
-  transferMasuk,
-  investasi,
-  hiburan,
-  kesehatan,
-}
-
-// ============================================================
-// MODEL
-// ============================================================
-
 class TransactionModel {
-  final String id;
+  final int? id;
   final String merchantName;
   final String category;
-  final TransactionCategory categoryEnum;
-  final TransactionType type;
   final double amount;
-  final DateTime dateTime;
+  final String type; // 'income' atau 'expense'
+  final String date;
 
-  const TransactionModel({
-    required this.id,
+  TransactionModel({
+    this.id,
     required this.merchantName,
     required this.category,
-    required this.categoryEnum,
-    required this.type,
     required this.amount,
-    required this.dateTime,
+    required this.type,
+    required this.date,
   });
 
-  bool get isIncome => type == TransactionType.income;
-}
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'merchantName': merchantName,
+      'category': category,
+      'amount': amount,
+      'type': type,
+      'date': date,
+    };
+  }
 
-// ============================================================
-// MONTHLY SUMMARY
-// ============================================================
-
-class MonthlySummary {
-  final double totalIncome;
-  final double totalExpense;
-
-  const MonthlySummary({required this.totalIncome, required this.totalExpense});
-}
-
-// ============================================================
-// DUMMY DATA
-// ============================================================
-
-class TransactionDummyData {
-  // ----------------------------------------------------------
-  // RINGKASAN BULAN INI (Oktober 2023)
-  // ----------------------------------------------------------
-  static const MonthlySummary summary = MonthlySummary(
-    totalIncome: 12450000,
-    totalExpense: 8240500,
-  );
-
-  // ----------------------------------------------------------
-  // LIST TRANSAKSI
-  // Dikelompokkan per hari, urutan terbaru di atas
-  // ----------------------------------------------------------
+  factory TransactionModel.fromMap(Map<String, dynamic> map) {
+    return TransactionModel(
+      id: map['id'],
+      merchantName: map['merchantName'],
+      category: map['category'],
+      amount: (map['amount'] as num).toDouble(),
+      type: map['type'],
+      date: map['date'],
+    );
+  }
 }

@@ -1,6 +1,11 @@
 import 'package:dukunsaldo_fe/core/constants/app_assets.dart';
+import 'package:dukunsaldo_fe/database/db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
+// import 'package:dukunsaldo_fe/database/preference.dart';
+import 'package:dukunsaldo_fe/features/auth/register.dart';
 import 'package:dukunsaldo_fe/features/home/home_screen.dart';
+// import 'package:dukunsaldo_fe/features/home/home_screen.dart';
+import 'package:dukunsaldo_fe/models/model_users.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../../core/widgets/custom_text_field.dart';
@@ -16,9 +21,43 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _cityController = TextEditingController();
+  // final TextEditingController _cityController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+
+  void login() async {
+    final email = _emailController.text.trim();
+    final pass = _passwordController.text;
+
+    if (email.isEmpty || pass.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Isi semua field!')));
+      return;
+    }
+
+    final pengguna = await DatabaseHelper.instance.loginUser(
+      UserModelSql(email: email, password: pass, username: ''),
+    );
+
+    // Cek apakah widget masih terpasang (mounted) sebelum menggunakan context
+    if (!mounted) return;
+
+    if (pengguna != null) {
+      await Preference.saveUserSession(pengguna.username, pengguna.email);
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+        (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Login gagal! email atau Password salah.'),
+        ),
+      );
+    }
+  }
 
   late TapGestureRecognizer _registerTapRecognizer;
 
@@ -28,7 +67,10 @@ class _LoginState extends State<Login> {
 
     _registerTapRecognizer = TapGestureRecognizer()
       ..onTap = () {
-        print("Pergi ke halaman Register");
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => Register()),
+        );
       };
   }
 
@@ -164,29 +206,7 @@ class _LoginState extends State<Login> {
                               text: "MASUK",
                               isLoading: _isLoading,
 
-                              onPressed: () async {
-                                await Preference.setLogin(true);
-                                setState(() {
-                                  _isLoading = true;
-                                });
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const HomePage(),
-                                    settings: RouteSettings(
-                                      arguments: {
-                                        "email": _emailController.text,
-                                      },
-                                    ),
-                                  ),
-                                );
-                                await Future.delayed(
-                                  const Duration(seconds: 2),
-                                );
-                                setState(() {
-                                  _isLoading = false;
-                                });
-                              },
+                              onPressed: login,
                             ),
 
                             SizedBox(height: 24),
