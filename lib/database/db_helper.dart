@@ -39,6 +39,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId INTEGER NOT NULL,
         merchantName TEXT NOT NULL,
         category TEXT NOT NULL,
         amount REAL NOT NULL,
@@ -151,5 +152,32 @@ class DatabaseHelper {
     );
 
     return results.map((map) => TransactionModel.fromMap(map)).toList();
+  }
+
+  Future<List<TransactionModel>> getTransactionsByUserId(int userId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> results = await db.query(
+      "transactions",
+      where: 'userId = ?',
+      orderBy: 'id DESC',
+    );
+    return results.map((map) => TransactionModel.fromMap(map)).toList();
+  }
+
+  // delete transaksi
+  Future<int> deleteTransaction(int id) async {
+    final db = await database;
+    return await db.delete('transactions', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // update transaksi
+  Future<int> updateTransaction(TransactionModel transaction) async {
+    final db = await database;
+    return await db.update(
+      'transactions',
+      transaction.toMap(),
+      where: 'id = ?',
+      whereArgs: [transaction.id],
+    );
   }
 }

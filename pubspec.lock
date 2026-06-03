@@ -120,6 +120,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.20.2"
+  json_table:
+    dependency: transitive
+    description:
+      name: json_table
+      sha256: d416092e76208801e237a4b233df9a9f22ffd8072a07b920519197381ae33005
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.1"
   leak_tracker:
     dependency: transitive
     description:
@@ -349,6 +357,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.0"
+  sqlite_viewer2:
+    dependency: "direct main"
+    description:
+      name: sqlite_viewer2
+      sha256: "43a874644b39f14214e75fdf6c7a0f2720a44558124faeeb41779da0505a06be"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
   stack_trace:
     dependency: transitive
     description:

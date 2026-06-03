@@ -1,5 +1,6 @@
 class TransactionModel {
   final int? id;
+  final int userId;
   final String merchantName;
   final String category;
   final double amount;
@@ -8,6 +9,7 @@ class TransactionModel {
 
   TransactionModel({
     this.id,
+    required this.userId,
     required this.merchantName,
     required this.category,
     required this.amount,
@@ -18,6 +20,7 @@ class TransactionModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'userId': userId,
       'merchantName': merchantName,
       'category': category,
       'amount': amount,
@@ -29,6 +32,7 @@ class TransactionModel {
   factory TransactionModel.fromMap(Map<String, dynamic> map) {
     return TransactionModel(
       id: map['id'],
+      userId: map['userId'],
       merchantName: map['merchantName'],
       category: map['category'],
       amount: (map['amount'] as num).toDouble(),

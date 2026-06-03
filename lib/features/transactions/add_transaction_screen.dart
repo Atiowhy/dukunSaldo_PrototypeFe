@@ -1,3 +1,4 @@
+import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/models/transactions_model.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -5,7 +6,8 @@ import 'package:dukunsaldo_fe/database/db_helper.dart';
 // import 'package:dukunsaldo_fe/models/transactions_model.dart';
 
 class AddTransactionScreen extends StatefulWidget {
-  const AddTransactionScreen({super.key});
+  const AddTransactionScreen({super.key, this.transaction});
+  final TransactionModel? transaction;
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -29,6 +31,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     {"name": "Gaji", "icon": Icons.money},
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    // 👇 Jika ada data yang dikirim (Mode Edit), isi form dengan data lama
+    if (widget.transaction != null) {
+      _amountController.text = widget.transaction!.amount.toInt().toString();
+      // Asumsi merchantName dipakai sebagai notes jika tidak cocok dengan kategori default
+      _notesController.text = widget.transaction!.merchantName;
+      _selectedType = widget.transaction!.type;
+      _selectedCategory = widget.transaction!.category;
+      _selectedDate =
+          DateTime.tryParse(widget.transaction!.date) ?? DateTime.now();
+    }
+  }
+
   Future<void> _pickDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -50,12 +67,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     if (txtAmount.isEmpty || amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Masukkan nominal transaksi yang valid dan lebih dari 0!",
-          ),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text("Masukkan nominal transaksi yang valid!")),
       );
       return;
     }
@@ -64,7 +76,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _isLoading = true;
     });
 
+    
     final transaksiBaru = TransactionModel(
+      id: widget
+          .transaction
+          ?.id,
+      userId: Preference.userId,
       merchantName: notes.isEmpty ? "Transaksi $_selectedCategory" : notes,
       category: _selectedCategory,
       amount: amount,
@@ -72,9 +89,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       date: _selectedDate.toIso8601String(),
     );
 
-    bool success = await DatabaseHelper.instance.insertTransaction(
-      transaksiBaru,
-    );
+    bool success = false;
+
+    
+    if (widget.transaction == null) {
+      
+      success = await DatabaseHelper.instance.insertTransaction(transaksiBaru);
+    } else {
+      
+      int result = await DatabaseHelper.instance.updateTransaction(
+        transaksiBaru,
+      );
+      success = result > 0;
+    }
 
     if (!mounted) return;
     setState(() {
@@ -83,17 +110,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Transaksi berhasil disimpan!"),
+        SnackBar(
+          content: Text(
+            widget.transaction == null
+                ? "Transaksi ditambahkan!"
+                : "Transaksi diperbarui!",
+          ),
           backgroundColor: Colors.green,
         ),
       );
-
-      Navigator.pop(context, true);
+      Navigator.pop(context, true); 
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Gagal menyimpan data ke database lokal!"),
+          content: Text("Gagal memproses data!"),
           backgroundColor: Colors.red,
         ),
       );

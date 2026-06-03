@@ -8,12 +8,13 @@ class Preference {
   }
 
   static bool get isLogin => _prefs?.getBool('isLogin') ?? false;
-
+  static int get userId => _prefs?.getInt('userId') ?? 0;
   static String get username => _prefs?.getString('username') ?? 'Guest';
   static String get email => _prefs?.getString('email') ?? '';
 
-  static Future<void> saveUserSession(String name, String email) async {
+  static Future<void> saveUserSession(int id, String name, String email) async {
     await _prefs?.setBool('isLogin', true);
+    await _prefs?.setInt('userId', id);
     await _prefs?.setString('username', name);
     await _prefs?.setString('email', email);
   }

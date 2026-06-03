@@ -44,7 +44,11 @@ class _LoginState extends State<Login> {
     if (!mounted) return;
 
     if (pengguna != null) {
-      await Preference.saveUserSession(pengguna.username, pengguna.email);
+      await Preference.saveUserSession(
+        pengguna.id!,
+        pengguna.username,
+        pengguna.email,
+      );
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => HomePage()),
