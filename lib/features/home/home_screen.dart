@@ -1,18 +1,21 @@
+import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:dukunsaldo_fe/core/providers/theme_provider.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/features/auth/login.dart';
+import 'package:dukunsaldo_fe/features/report/report_screen.dart';
 import 'package:dukunsaldo_fe/features/transactions/add_transaction_screen.dart';
 import 'package:dukunsaldo_fe/models/summary_model.dart';
 import 'package:dukunsaldo_fe/models/transactions_model.dart';
 import 'package:dukunsaldo_fe/service/finance_analysis_service.dart';
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqlite_viewer2/sqlite_viewer.dart';
+
+import '../../database/db_helper.dart';
+import '../history/transaction_history_screen.dart';
 import '../prediction(EWS)/prediction_screen.dart';
 import '../recomendation/recomendation_screen.dart';
-import '../history/transaction_history_screen.dart';
-import '../../database/db_helper.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -31,6 +34,9 @@ class _HomePageState extends State<HomePage> {
   double _currentBalance = 0;
   List<FlSpot> _realChartSpots = [const FlSpot(0, 0)];
   List<FlSpot> _predictChartSpots = [];
+
+  // 👇 Variabel baru untuk melacak kesiapan DES (min 2 bulan)
+  int _uniqueMonthsCount = 0;
 
   void _onItemTapped(int index) {
     setState(() {
@@ -59,21 +65,19 @@ class _HomePageState extends State<HomePage> {
 
   String formatCompact(double amount) {
     if (amount >= 1000000000) {
-      return '${(amount / 1000000000).toStringAsFixed(1)}B';
+      return '${(amount / 1000000000).toStringAsFixed(1)}M';
     } else if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1)}M';
+      return '${(amount / 1000000).toStringAsFixed(1)}Jt';
     } else if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(1)}K';
+      return '${(amount / 1000).toStringAsFixed(1)}Rb';
     }
     return amount.toStringAsFixed(0);
   }
 
-  // Fetch Database
   Future<void> _fetchTransactions() async {
     int activeUserId = Preference.userId;
     final db = await DatabaseHelper.instance.database;
 
-    // Ambil data mentah (Maps) dari SQLite
     final List<Map<String, dynamic>> maps = await db.query(
       'transactions',
       where: 'userId = ?',
@@ -81,20 +85,28 @@ class _HomePageState extends State<HomePage> {
       orderBy: 'id DESC',
     );
 
-    // Konversi List<Map> menjadi List<TransactionModel> agar lebih rapi
     List<TransactionModel> transactionModels = maps
         .map((e) => TransactionModel.fromMap(e))
         .toList();
 
-    // 👉 Panggil "Dapur" Service untuk menghitung semuanya
+    // 👇 LOGIKA BARU: Hitung ada berapa bulan unik di dalam database
+    Set<String> uniqueMonths = {};
+    for (var trx in transactionModels) {
+      DateTime date = DateTime.tryParse(trx.date) ?? DateTime.now();
+      // Format kuncinya: Tahun-Bulan (misal: "2026-05")
+      uniqueMonths.add("${date.year}-${date.month}");
+    }
+
     SummaryModel calculatedSummary = FinanceAnalysisService.calculateDashboard(
       transactionModels,
     );
 
-    // Perbarui UI dengan hasil yang sudah matang
     setState(() {
       _localTransactions = maps;
       _refreshCounter++;
+
+      // Update data jumlah bulan untuk progress bar
+      _uniqueMonthsCount = uniqueMonths.length;
 
       _totalIncome = calculatedSummary.totalIncome;
       _totalExpense = calculatedSummary.totalExpense;
@@ -104,7 +116,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // Fungsi Hapus dengan Dialog Konfirmasi
   void _deleteTransaction(int id) async {
     bool confirm =
         await showDialog(
@@ -115,17 +126,23 @@ class _HomePageState extends State<HomePage> {
               "Hapus Transaksi?",
               style: TextStyle(color: Theme.of(context).primaryColor),
             ),
-            content: const Text(
+            content: Text(
               "Tindakan ini akan menghapus catatan kas ini secara permanen.",
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text("Batal"),
+                child: Text(
+                  "Batal",
+                  style: TextStyle(color: Theme.of(context).primaryColor),
+                ),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
+                  backgroundColor: Theme.of(context).colorScheme.error,
                 ),
                 onPressed: () => Navigator.pop(context, true),
                 child: const Text(
@@ -140,7 +157,7 @@ class _HomePageState extends State<HomePage> {
 
     if (confirm) {
       await DatabaseHelper.instance.deleteTransaction(id);
-      _fetchTransactions(); // Refresh data otomatis setelah dihapus
+      _fetchTransactions();
     }
   }
 
@@ -160,6 +177,7 @@ class _HomePageState extends State<HomePage> {
       _buildHomeContent(theme, isDarkMode),
       AdvisorPage(refreshTrigger: _refreshCounter),
       RecommendationPage(refreshTrigger: _refreshCounter),
+      ReportScreen(),
     ];
 
     final String userEmail = Preference.email.isEmpty
@@ -170,12 +188,26 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(
-          userName,
-          style: TextStyle(
-            color: theme.primaryColor,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Halo, $userName 👋",
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.textTheme.bodyMedium?.color,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+            Text(
+              "Dashboard",
+              style: TextStyle(
+                color: theme.primaryColor,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
@@ -194,21 +226,51 @@ class _HomePageState extends State<HomePage> {
       ),
       body: IndexedStack(index: _selectedIndex, children: pages),
 
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF0F1E29),
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Color(0xff6BFB9A), size: 28),
-        onPressed: () async {
-          final bool? isDataChanged = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AddTransactionScreen(),
+      // FAB Modern
+      floatingActionButton: Container(
+        height: 64,
+        width: 64,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(
+            colors: [
+              AppColors.darkPrimaryButtonColor,
+              AppColors.lightPrimaryButtonColor,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.darkPrimaryButtonColor.withOpacity(0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
-          );
-          if (isDataChanged == true) {
-            _fetchTransactions();
-          }
-        },
+          ],
+        ),
+        child: FloatingActionButton(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          shape: const CircleBorder(),
+          child: Icon(
+            Icons.add,
+            color: isDarkMode
+                ? AppColors.darkScaffoldBackgroundColor
+                : AppColors.lightCardColor,
+            size: 32,
+          ),
+          onPressed: () async {
+            final bool? isDataChanged = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AddTransactionScreen(),
+              ),
+            );
+            if (isDataChanged == true) {
+              _fetchTransactions();
+            }
+          },
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
@@ -223,17 +285,21 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.star_outline),
             label: "Rekomendasi",
           ),
+          BottomNavigationBarItem(icon: Icon(Icons.report), label: "Report"),
         ],
         currentIndex: _selectedIndex,
-        unselectedItemColor: Colors.grey,
-        selectedItemColor: const Color(0xff6BFB9A),
+        unselectedItemColor: theme.textTheme.bodyMedium?.color?.withOpacity(
+          0.5,
+        ),
+        selectedItemColor: isDarkMode
+            ? AppColors.darkPrimaryButtonColor
+            : AppColors.lightPrimaryButtonColor,
         onTap: _onItemTapped,
         backgroundColor: theme.cardColor,
       ),
     );
   }
 
-  // --- DRAWER ---
   Widget _buildDrawer(
     String userEmail,
     String userName,
@@ -309,9 +375,7 @@ class _HomePageState extends State<HomePage> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const DatabaseList(),
-                ), // 👈 Buka halaman Viewer
+                MaterialPageRoute(builder: (_) => const DatabaseList()),
               );
             },
           ),
@@ -321,6 +385,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Switch(
                   value: isDarkMode,
+                  activeThumbColor: AppColors.darkPrimaryButtonColor,
                   onChanged: (bool value) => themeProvider.toggleTheme(value),
                 ),
                 Text(
@@ -335,7 +400,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- HOME CONTENT ---
   Widget _buildHomeContent(ThemeData theme, bool isDarkMode) {
     final List<Map<String, dynamic>> displayList = _localTransactions;
 
@@ -348,9 +412,14 @@ class _HomePageState extends State<HomePage> {
           children: [
             _buildBalanceCard(theme, isDarkMode),
             const SizedBox(height: 24),
+
+            // 👇 WIDGET TRACKER DES ENGINE BARU DIPANGGIL DI SINI
+            _buildDESProgressBar(theme, isDarkMode),
+            const SizedBox(height: 24),
+
             _buildPredictionChart(theme, isDarkMode),
             const SizedBox(height: 24),
-            _buildSummaryCards(),
+            _buildSummaryCards(theme, isDarkMode),
             const SizedBox(height: 32),
 
             Row(
@@ -376,8 +445,8 @@ class _HomePageState extends State<HomePage> {
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: isDarkMode
-                          ? const Color(0xff6BFB9A)
-                          : const Color(0xFF005E2D),
+                          ? AppColors.darkPrimaryButtonColor
+                          : AppColors.lightPrimaryButtonColor,
                     ),
                   ),
                 ),
@@ -394,14 +463,14 @@ class _HomePageState extends State<HomePage> {
                           Icon(
                             Icons.receipt_long_outlined,
                             size: 48,
-                            color: theme.disabledColor,
+                            color: theme.dividerColor,
                           ),
                           const SizedBox(height: 12),
                           Text(
                             "Belum ada transaksi.\nKlik tombol + untuk menambahkan!",
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: theme.disabledColor,
+                              color: theme.textTheme.bodyMedium?.color,
                               fontSize: 14,
                             ),
                           ),
@@ -438,7 +507,9 @@ class _HomePageState extends State<HomePage> {
                                   : Icons.shopping_bag_outlined,
                               size: 38,
                               color: isIncome
-                                  ? const Color(0xff6BFB9A)
+                                  ? (isDarkMode
+                                        ? AppColors.darkPrimaryButtonColor
+                                        : AppColors.lightPrimaryButtonColor)
                                   : theme.primaryColor,
                             ),
                             const SizedBox(width: 16),
@@ -466,28 +537,26 @@ class _HomePageState extends State<HomePage> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              "${isIncome ? '+' : '-'} Rp ${formatCompact(amount)}", // Pakai formatCompact agar tidak tabrakan dengan menu
+                              "${isIncome ? '+' : '-'} Rp ${formatCompact(amount)}",
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: isIncome
                                     ? (isDarkMode
-                                          ? const Color(0xff6BFB9A)
-                                          : Colors.green)
-                                    : const Color(0xffBA1A1A),
+                                          ? AppColors.darkPrimaryButtonColor
+                                          : AppColors.lightPrimaryButtonColor)
+                                    : theme.colorScheme.error,
                               ),
                             ),
-                            // 👇 MENU TITIK TIGA UNTUK EDIT & DELETE
                             PopupMenuButton<String>(
                               icon: Icon(
                                 Icons.more_vert,
-                                color: theme.disabledColor,
+                                color: theme.dividerColor,
                                 size: 20,
                               ),
                               padding: EdgeInsets.zero,
                               onSelected: (value) async {
                                 if (value == 'edit') {
-                                  // Navigasi ke AddTransactionScreen dengan membawa data
                                   final bool? isChanged = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -498,13 +567,9 @@ class _HomePageState extends State<HomePage> {
                                           ),
                                     ),
                                   );
-                                  if (isChanged == true) {
-                                    _fetchTransactions(); // Refresh jika diupdate
-                                  }
+                                  if (isChanged == true) _fetchTransactions();
                                 } else if (value == 'delete') {
-                                  _deleteTransaction(
-                                    trx['id'],
-                                  ); // Panggil fungsi hapus
+                                  _deleteTransaction(trx['id']);
                                 }
                               },
                               itemBuilder: (context) => [
@@ -527,20 +592,20 @@ class _HomePageState extends State<HomePage> {
                                     ],
                                   ),
                                 ),
-                                const PopupMenuItem(
+                                PopupMenuItem(
                                   value: 'delete',
                                   child: Row(
                                     children: [
                                       Icon(
                                         Icons.delete,
                                         size: 18,
-                                        color: Colors.redAccent,
+                                        color: theme.colorScheme.error,
                                       ),
-                                      SizedBox(width: 8),
+                                      const SizedBox(width: 8),
                                       Text(
                                         'Hapus',
                                         style: TextStyle(
-                                          color: Colors.redAccent,
+                                          color: theme.colorScheme.error,
                                         ),
                                       ),
                                     ],
@@ -559,52 +624,254 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- BALANCE CARD DINAMIS ---
-  Widget _buildBalanceCard(ThemeData theme, bool isDarkMode) {
+  // 👇 FUNGSI BARU: Progress Bar Kesiapan Algoritma
+  Widget _buildDESProgressBar(ThemeData theme, bool isDarkMode) {
+    const int targetMonths = 2; // Syarat minimal untuk DES
+    int current = _uniqueMonthsCount > targetMonths
+        ? targetMonths
+        : _uniqueMonthsCount;
+    double progress = targetMonths == 0 ? 0 : (current / targetMonths);
+    bool isUnlocked = current >= targetMonths;
+    final Color primaryAccent = isDarkMode
+        ? AppColors.darkPrimaryButtonColor
+        : AppColors.lightPrimaryButtonColor;
+
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDarkMode ? theme.cardColor : const Color(0xFF263238),
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isUnlocked
+              ? primaryAccent.withOpacity(0.5)
+              : theme.dividerColor,
+          width: isUnlocked ? 1.5 : 1.0,
+        ),
+        boxShadow: isUnlocked
+            ? [
+                BoxShadow(
+                  color: primaryAccent.withOpacity(0.1),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Total Saldo Saat Ini",
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    isUnlocked ? Icons.check_circle : Icons.insights,
+                    color: isUnlocked ? primaryAccent : Colors.grey,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Kesiapan AI Prediksi",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: theme.primaryColor,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: isUnlocked
+                      ? primaryAccent.withOpacity(0.1)
+                      : theme.dividerColor.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  isUnlocked ? "Aktif" : "$current/$targetMonths Bulan",
+                  style: TextStyle(
+                    color: isUnlocked
+                        ? primaryAccent
+                        : theme.textTheme.bodyMedium?.color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            "Rp ${formatRupiah(_currentBalance.toInt())}", //
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          const SizedBox(height: 16),
+          // Custom Animated Progress Bar
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return Stack(
+                children: [
+                  // Latar Belakang Progress Bar (Kosong)
+                  Container(
+                    height: 8,
+                    width: constraints.maxWidth,
+                    decoration: BoxDecoration(
+                      color: theme.dividerColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  // Indikator Isi (Beranimasi)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 1000),
+                    curve: Curves.fastOutSlowIn,
+                    height: 8,
+                    width: constraints.maxWidth * progress,
+                    decoration: BoxDecoration(
+                      color: primaryAccent,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: isUnlocked
+                          ? [
+                              BoxShadow(
+                                color: primaryAccent.withOpacity(0.5),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : [],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 12),
-          Row(
+          Text(
+            isUnlocked
+                ? "Bagus! Algoritma AI prediksi arus kas (DES) sekarang dapat melacak tren keuanganmu."
+                : "Catat transaksi dari minimal $targetMonths bulan berbeda agar Sistem dapat mengaktifkan fitur prediksi.",
+            style: TextStyle(
+              color: theme.textTheme.bodyMedium?.color,
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- BALANCE CARD DINAMIS ---
+  Widget _buildBalanceCard(ThemeData theme, bool isDarkMode) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDarkMode
+              ? [AppColors.darkCardColor, AppColors.darkScaffoldBackgroundColor]
+              : [AppColors.lightPrimaryButtonColor, const Color(0xFF003B1C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color:
+                (isDarkMode
+                        ? AppColors.darkPrimaryButtonColor
+                        : AppColors.lightPrimaryButtonColor)
+                    .withOpacity(0.15),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            top: -10,
+            child: Icon(
+              Icons.account_balance_wallet,
+              size: 100,
+              color: Colors.white.withOpacity(0.05),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                _currentBalance >= 0 ? Icons.trending_up : Icons.trending_down,
-                color: _currentBalance >= 0
-                    ? const Color(0xff6BFB9A)
-                    : Colors.redAccent,
-                size: 16,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                _currentBalance >= 0 ? "+ Update Realtime" : "- Defisit",
-                style: TextStyle(
-                  color: _currentBalance >= 0
-                      ? const Color(0xff6BFB9A)
-                      : Colors.redAccent,
-                  fontSize: 12,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
                 ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  "Total Saldo Saat Ini",
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Rp ${formatRupiah(_currentBalance.toInt())}",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: _currentBalance >= 0
+                          ? (isDarkMode
+                                    ? AppColors.darkPrimaryButtonColor
+                                    : AppColors.lightPrimaryButtonColor)
+                                .withOpacity(0.2)
+                          : theme.colorScheme.error.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _currentBalance >= 0
+                          ? Icons.trending_up
+                          : Icons.trending_down,
+                      color: _currentBalance >= 0
+                          ? (isDarkMode
+                                ? AppColors.darkPrimaryButtonColor
+                                : AppColors.lightButtonTextColor)
+                          : theme.colorScheme.error,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _currentBalance >= 0
+                        ? "Update Realtime • Sehat"
+                        : "Defisit Terdeteksi",
+                    style: TextStyle(
+                      color: _currentBalance >= 0
+                          ? (isDarkMode
+                                ? AppColors.darkPrimaryButtonColor
+                                : AppColors.lightButtonTextColor)
+                          : theme.colorScheme.error,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -615,6 +882,9 @@ class _HomePageState extends State<HomePage> {
 
   // --- CHART DINAMIS ---
   Widget _buildPredictionChart(ThemeData theme, bool isDarkMode) {
+    final Color chartPrimaryColor = isDarkMode
+        ? AppColors.darkPrimaryButtonColor
+        : AppColors.lightPrimaryButtonColor;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -656,8 +926,8 @@ class _HomePageState extends State<HomePage> {
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF005E2D),
+                        decoration: BoxDecoration(
+                          color: chartPrimaryColor,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -747,32 +1017,24 @@ class _HomePageState extends State<HomePage> {
                       ),
                       borderData: FlBorderData(show: false),
                       lineBarsData: [
-                        // GARIS RIIL
                         LineChartBarData(
                           spots: _realChartSpots,
                           isCurved: true,
-                          color: isDarkMode
-                              ? const Color(0xff6BFB9A)
-                              : const Color(0xFF005E2D),
+                          color: chartPrimaryColor,
                           barWidth: 4,
                           isStrokeCapRound: true,
                           dotData: const FlDotData(show: false),
                           belowBarData: BarAreaData(
                             show: true,
-                            color:
-                                (isDarkMode
-                                        ? const Color(0xff6BFB9A)
-                                        : const Color(0xFF005E2D))
-                                    .withAlpha(1),
+                            color: chartPrimaryColor.withAlpha(50),
                           ),
                         ),
-                        // GARIS PREDIKSI (DUMMY SES)
                         LineChartBarData(
                           spots: _predictChartSpots,
                           isCurved: true,
                           color: isDarkMode
                               ? Colors.white
-                              : const Color(0xFF0D1C2D),
+                              : AppColors.lightPrimaryTextColor,
                           barWidth: 4,
                           isStrokeCapRound: true,
                           dotData: const FlDotData(show: false),
@@ -788,40 +1050,70 @@ class _HomePageState extends State<HomePage> {
   }
 
   // --- SUMMARY CARDS ---
-  Widget _buildSummaryCards() {
+  Widget _buildSummaryCards(ThemeData theme, bool isDarkMode) {
+    final Color incomeColor = isDarkMode
+        ? AppColors.darkPrimaryButtonColor
+        : AppColors.lightPrimaryButtonColor;
+    final Color expenseColor = theme.colorScheme.error;
+
     return Row(
       children: [
         Expanded(
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xff6BFB9A),
-              borderRadius: BorderRadius.circular(16),
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: incomeColor.withOpacity(0.3),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: incomeColor.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF005E2D),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_downward,
-                    color: Colors.white,
-                    size: 16,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: incomeColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.arrow_downward,
+                        color: incomeColor,
+                        size: 18,
+                      ),
+                    ),
+                    Icon(
+                      Icons.show_chart,
+                      color: incomeColor.withOpacity(0.5),
+                      size: 16,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   "Pemasukan",
-                  style: TextStyle(color: Color(0xFF005E2D), fontSize: 12),
+                  style: TextStyle(
+                    color: theme.textTheme.bodyMedium?.color,
+                    fontSize: 12,
+                  ),
                 ),
+                const SizedBox(height: 4),
                 Text(
                   "Rp ${formatCompact(_totalIncome)}",
-                  style: const TextStyle(
-                    color: Color(0xFF005E2D),
+                  style: TextStyle(
+                    color: incomeColor,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -835,33 +1127,58 @@ class _HomePageState extends State<HomePage> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFD1D1),
-              borderRadius: BorderRadius.circular(16),
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: expenseColor.withOpacity(0.3),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: expenseColor.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFA00000),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_upward,
-                    color: Colors.white,
-                    size: 16,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: expenseColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.arrow_upward,
+                        color: expenseColor,
+                        size: 18,
+                      ),
+                    ),
+                    Icon(
+                      Icons.show_chart,
+                      color: expenseColor.withOpacity(0.5),
+                      size: 16,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   "Pengeluaran",
-                  style: TextStyle(color: Color(0xFFA00000), fontSize: 12),
+                  style: TextStyle(
+                    color: theme.textTheme.bodyMedium?.color,
+                    fontSize: 12,
+                  ),
                 ),
+                const SizedBox(height: 4),
                 Text(
                   "Rp ${formatCompact(_totalExpense)}",
-                  style: const TextStyle(
-                    color: Color(0xFFA00000),
+                  style: TextStyle(
+                    color: expenseColor,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),

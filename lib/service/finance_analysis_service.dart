@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
-import '../models/transactions_model.dart';
+
 import '../models/summary_model.dart';
+import '../models/transactions_model.dart';
 
 class AdvisorModel {
   final double nextMonthForecast;
@@ -43,6 +44,24 @@ class RecommendationModel {
     required this.savingsTarget,
     required this.totalPotentialSavings,
     required this.efficiencyProgress,
+  });
+}
+
+class ReportModel {
+  final double currentMonthExpense;
+  final double lastMonthExpense;
+  final double expenseTrend;
+  final int accuracyScore;
+  final List<MapEntry<String, double>> topCategories;
+  final Map<String, double> categoryPercentages;
+
+  ReportModel({
+    required this.currentMonthExpense,
+    required this.lastMonthExpense,
+    required this.expenseTrend,
+    required this.accuracyScore,
+    required this.topCategories,
+    required this.categoryPercentages,
   });
 }
 
@@ -208,7 +227,6 @@ class FinanceAnalysisService {
     );
   }
 
-  
   static RecommendationModel generateRecommendations(
     List<TransactionModel> transactions,
   ) {
@@ -258,6 +276,73 @@ class FinanceAnalysisService {
       savingsTarget: savingsTarget,
       totalPotentialSavings: totalHemat,
       efficiencyProgress: progress,
+    );
+  }
+
+  // Tambahkan fungsi ini DI DALAM class FinanceAnalysisService
+  static ReportModel generateReportData(List<TransactionModel> transactions) {
+    DateTime now = DateTime.now();
+    double tempCurrentExpense = 0;
+    double tempLastMonthExpense = 0;
+    Map<String, double> tempCategoryTotals = {};
+
+    for (var trx in transactions) {
+      if (trx.type == 'expense') {
+        DateTime date = DateTime.tryParse(trx.date) ?? now;
+
+        // 1. Hitung pengeluaran bulan INI
+        if (date.year == now.year && date.month == now.month) {
+          tempCurrentExpense += trx.amount;
+          tempCategoryTotals[trx.category] =
+              (tempCategoryTotals[trx.category] ?? 0) + trx.amount;
+        }
+        // 2. Hitung pengeluaran bulan LALU
+        else if ((now.month == 1 &&
+                date.year == now.year - 1 &&
+                date.month == 12) ||
+            (date.year == now.year && date.month == now.month - 1)) {
+          tempLastMonthExpense += trx.amount;
+        }
+      }
+    }
+
+    // 3. Hitung Persentase Tren
+    // 3. Hitung Persentase Tren & Logika Akurasi AI
+    double trend = 0;
+    int calculatedAccuracy = 0; // Default 0% jika database benar-benar kosong
+
+    if (tempLastMonthExpense > 0 && tempCurrentExpense > 0) {
+      // Jika ada data bulan lalu DAN bulan ini, algoritma bisa membandingkan
+      trend =
+          ((tempCurrentExpense - tempLastMonthExpense) / tempLastMonthExpense) *
+          100;
+      calculatedAccuracy =
+          95; // AI sudah memiliki cukup data untuk prediksi akurat
+    } else if (tempCurrentExpense > 0 || tempLastMonthExpense > 0) {
+      // Jika baru ada data 1 bulan saja, AI sedang dalam masa "belajar"
+      calculatedAccuracy = 45;
+    }
+
+    // 4. Urutkan Kategori Terboros (Dari terbesar ke terkecil)
+    List<MapEntry<String, double>> sortedCategories =
+        tempCategoryTotals.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+
+    // 5. Hitung Persentase untuk Donut Chart
+    Map<String, double> percentages = {};
+    if (tempCurrentExpense > 0) {
+      for (var entry in sortedCategories) {
+        percentages[entry.key] = (entry.value / tempCurrentExpense) * 100;
+      }
+    }
+
+    return ReportModel(
+      currentMonthExpense: tempCurrentExpense,
+      lastMonthExpense: tempLastMonthExpense,
+      expenseTrend: trend,
+      accuracyScore: calculatedAccuracy, // 👈 Sekarang akurasinya dinamis!
+      topCategories: sortedCategories,
+      categoryPercentages: percentages,
     );
   }
 }

@@ -1,4 +1,4 @@
-// import 'package:dukunsaldo_fe/core/providers/theme_provider.dart';
+import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:dukunsaldo_fe/database/db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/models/transactions_model.dart';
@@ -6,7 +6,6 @@ import 'package:dukunsaldo_fe/service/finance_analysis_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-// import 'package:provider/provider.dart';
 
 class AdvisorPage extends StatefulWidget {
   final int refreshTrigger;
@@ -29,9 +28,7 @@ class _AdvisorPageState extends State<AdvisorPage> {
   @override
   void didUpdateWidget(covariant AdvisorPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Jika sinyal dari HomePage berubah (karena ada transaksi baru/dihapus)
     if (widget.refreshTrigger != oldWidget.refreshTrigger) {
-      // Tarik ulang data dari SQLite secara diam-diam di latar belakang!
       _fetchAndAnalyzeData();
     }
   }
@@ -40,7 +37,6 @@ class _AdvisorPageState extends State<AdvisorPage> {
     int activeUserId = Preference.userId;
     final db = await DatabaseHelper.instance.database;
 
-    // Ambil semua transaksi user ini
     final List<Map<String, dynamic>> maps = await db.query(
       'transactions',
       where: 'userId = ?',
@@ -52,7 +48,6 @@ class _AdvisorPageState extends State<AdvisorPage> {
         .map((e) => TransactionModel.fromMap(e))
         .toList();
 
-    // Hitung total saldo saat ini untuk logika defisit
     double currentBalance = 0;
     for (var trx in transactions) {
       if (trx.type == 'income') {
@@ -62,7 +57,6 @@ class _AdvisorPageState extends State<AdvisorPage> {
       }
     }
 
-    // Proses data melalui otak algoritma DES
     final data = FinanceAnalysisService.generateAdvisorData(
       transactions,
       currentBalance,
@@ -84,22 +78,25 @@ class _AdvisorPageState extends State<AdvisorPage> {
 
   String formatCompact(double amount) {
     if (amount >= 1000000) {
-      return 'Rp ${(amount / 1000000).toStringAsFixed(1)}M';
+      return 'Rp ${(amount / 1000000).toStringAsFixed(1)}Jt';
     }
-
-    if (amount >= 1000) return 'Rp ${(amount / 1000).toStringAsFixed(1)}k';
+    if (amount >= 1000) return 'Rp ${(amount / 1000).toStringAsFixed(1)}Rb';
     return 'Rp ${amount.toStringAsFixed(0)}';
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // final isDarkMode = theme.brightness == Brightness.dark;
+    final isDarkMode = theme.brightness == Brightness.dark;
+
+    // Warna Dinamis
+    final primaryAccent = isDarkMode
+        ? AppColors.darkPrimaryButtonColor
+        : AppColors.lightPrimaryButtonColor;
+    final errorColor = theme.colorScheme.error;
 
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xff6BFB9A)),
-      );
+      return Center(child: CircularProgressIndicator(color: primaryAccent));
     }
 
     final data = _advisorData!;
@@ -122,87 +119,137 @@ class _AdvisorPageState extends State<AdvisorPage> {
             const SizedBox(height: 4),
             Text(
               "Data terupdate hari ini pukul ${DateFormat('HH:mm').format(DateTime.now())} WIB",
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+              style: TextStyle(
+                color: theme.textTheme.bodyMedium?.color,
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 24),
 
-            // --- KARTU 1: PREDIKSI UTAMA ---
+            // --- KARTU 1: PREDIKSI UTAMA (MODERN GRADIENT) ---
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: theme.dividerColor),
+                gradient: LinearGradient(
+                  colors: isDarkMode
+                      ? [
+                          AppColors.darkCardColor,
+                          AppColors.darkScaffoldBackgroundColor,
+                        ]
+                      : [
+                          AppColors.lightPrimaryButtonColor,
+                          const Color(0xFF003B1C),
+                        ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withAlpha(1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: primaryAccent.withOpacity(0.15),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
                   ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "Prediksi Pengeluaran Bulan Depan",
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: data.percentageChange > 0
-                              ? const Color(0xFFFFD1D1)
-                              : const Color(0xff6BFB9A).withAlpha(1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              data.percentageChange > 0
-                                  ? Icons.trending_up
-                                  : Icons.trending_down,
-                              size: 14,
-                              color: data.percentageChange > 0
-                                  ? const Color(0xFFA00000)
-                                  : const Color(0xFF005E2D),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              "${data.percentageChange.abs().toStringAsFixed(1)}%",
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: data.percentageChange > 0
-                                    ? const Color(0xFFA00000)
-                                    : const Color(0xFF005E2D),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    formatRupiah(data.nextMonthForecast),
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: theme.primaryColor,
+                  Positioned(
+                    right: -20,
+                    top: -10,
+                    child: Icon(
+                      Icons.online_prediction,
+                      size: 100,
+                      color: Colors.white.withOpacity(0.05),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "Dihitung berdasarkan Double Exponential Smoothing",
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // 👇 DIPERBAIKI: Dibungkus Expanded agar aman di layar kecil
+                          Expanded(
+                            child: Container(
+                              margin: const EdgeInsets.only(
+                                right: 8,
+                              ), // Jarak ke persentase
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                "Prediksi Pengeluaran Bulan Depan",
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: data.percentageChange > 0
+                                  ? errorColor.withOpacity(0.2)
+                                  : primaryAccent.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  data.percentageChange > 0
+                                      ? Icons.trending_up
+                                      : Icons.trending_down,
+                                  size: 14,
+                                  color: data.percentageChange > 0
+                                      ? const Color(0xFFFFB3B3)
+                                      : primaryAccent,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  "${data.percentageChange.abs().toStringAsFixed(1)}%",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: data.percentageChange > 0
+                                        ? const Color(0xFFFFB3B3)
+                                        : primaryAccent,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        formatRupiah(data.nextMonthForecast),
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -1,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        "Dihitung berdasarkan Double Exponential Smoothing",
+                        style: TextStyle(color: Colors.white54, fontSize: 11),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -215,16 +262,16 @@ class _AdvisorPageState extends State<AdvisorPage> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFE5E5),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFFB3B3)),
+                  color: errorColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: errorColor.withOpacity(0.3)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.warning_amber_rounded,
-                      color: Color(0xFFA00000),
+                      color: errorColor,
                       size: 28,
                     ),
                     const SizedBox(width: 12),
@@ -232,10 +279,10 @@ class _AdvisorPageState extends State<AdvisorPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             "Potensi Defisit Terdeteksi!",
                             style: TextStyle(
-                              color: Color(0xFFA00000),
+                              color: errorColor,
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
@@ -243,8 +290,8 @@ class _AdvisorPageState extends State<AdvisorPage> {
                           const SizedBox(height: 4),
                           Text(
                             "Total pengeluaran Anda diprediksi melampaui sisa saldo sebesar ${formatRupiah(data.deficitAmount)}. Segera lakukan penyesuaian anggaran.",
-                            style: const TextStyle(
-                              color: Color(0xFFA00000),
+                            style: TextStyle(
+                              color: isDarkMode ? Colors.red[200] : errorColor,
                               fontSize: 13,
                               height: 1.4,
                             ),
@@ -257,28 +304,39 @@ class _AdvisorPageState extends State<AdvisorPage> {
               ),
             if (data.isDeficit) const SizedBox(height: 16),
 
-            // --- KARTU 3 & 4: LEVEL DAN TREND ---
+            // --- KARTU 3 & 4: LEVEL DAN TREND (MODERN OUTLINE) ---
             Row(
               children: [
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    // 👇 DIPERBAIKI: Padding dikurangi sedikit agar muat di HP kecil
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(16),
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: theme.dividerColor, width: 1.5),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          children: const [
-                            Icon(Icons.bar_chart, color: Colors.grey, size: 18),
-                            SizedBox(width: 8),
-                            Text(
-                              "Level (Rata-rata)",
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 12,
+                          children: [
+                            Icon(
+                              Icons.bar_chart,
+                              color: theme.textTheme.bodyMedium?.color,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            // 👇 DIPERBAIKI: Dibungkus Expanded dan Ellipsis
+                            Expanded(
+                              child: Text(
+                                "Level (Rata-rata)",
+                                style: TextStyle(
+                                  color: theme.textTheme.bodyMedium?.color,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -286,16 +344,19 @@ class _AdvisorPageState extends State<AdvisorPage> {
                         const SizedBox(height: 12),
                         Text(
                           formatCompact(data.level),
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: theme.primaryColor,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
+                        Text(
                           "Stabilitas pengeluaran dasar bulan ini.",
-                          style: TextStyle(color: Colors.grey, fontSize: 11),
+                          style: TextStyle(
+                            color: theme.textTheme.bodyMedium?.color,
+                            fontSize: 11,
+                          ),
                         ),
                       ],
                     ),
@@ -304,27 +365,44 @@ class _AdvisorPageState extends State<AdvisorPage> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    // 👇 DIPERBAIKI: Padding dikurangi sedikit agar muat di HP kecil
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xff6BFB9A),
-                      borderRadius: BorderRadius.circular(16),
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: primaryAccent.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryAccent.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          children: const [
+                          children: [
                             Icon(
                               Icons.trending_up,
-                              color: Color(0xFF005E2D),
+                              color: primaryAccent,
                               size: 18,
                             ),
-                            SizedBox(width: 8),
-                            Text(
-                              "Trend (Kenaikan)",
-                              style: TextStyle(
-                                color: Color(0xFF005E2D),
-                                fontSize: 12,
+                            const SizedBox(width: 8),
+                            // 👇 DIPERBAIKI: Dibungkus Expanded dan Ellipsis
+                            Expanded(
+                              child: Text(
+                                "Trend (Kenaikan)",
+                                style: TextStyle(
+                                  color: primaryAccent,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -332,17 +410,19 @@ class _AdvisorPageState extends State<AdvisorPage> {
                         const SizedBox(height: 12),
                         Text(
                           "${data.trend >= 0 ? '+' : ''} ${formatCompact(data.trend)}",
-                          style: const TextStyle(
-                            color: Color(0xFF005E2D),
+                          style: TextStyle(
+                            color: primaryAccent,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
+                        Text(
                           "Laju akselerasi pengeluaran variabel.",
                           style: TextStyle(
-                            color: Color(0xFF005E2D),
+                            color: isDarkMode
+                                ? primaryAccent.withOpacity(0.8)
+                                : theme.textTheme.bodyMedium?.color,
                             fontSize: 11,
                           ),
                         ),
@@ -354,12 +434,12 @@ class _AdvisorPageState extends State<AdvisorPage> {
             ),
             const SizedBox(height: 24),
 
-            //  BAR CHART (ANGGARAN VS PREDIKSI) ---
+            // --- KARTU 5: BAR CHART (ANGGARAN VS PREDIKSI) ---
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: theme.cardColor,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: theme.dividerColor),
               ),
               child: Column(
@@ -402,7 +482,7 @@ class _AdvisorPageState extends State<AdvisorPage> {
                                   child: Text(
                                     labels[value.toInt()],
                                     style: TextStyle(
-                                      color: theme.primaryColor,
+                                      color: theme.textTheme.bodyMedium?.color,
                                       fontSize: 12,
                                       fontWeight: value == 2
                                           ? FontWeight.bold
@@ -426,8 +506,11 @@ class _AdvisorPageState extends State<AdvisorPage> {
                         gridData: FlGridData(
                           show: true,
                           drawVerticalLine: false,
-                          getDrawingHorizontalLine: (value) =>
-                              FlLine(color: theme.dividerColor, strokeWidth: 1),
+                          getDrawingHorizontalLine: (value) => FlLine(
+                            color: theme.dividerColor,
+                            strokeWidth: 1,
+                            dashArray: [4, 4],
+                          ),
                         ),
                         borderData: FlBorderData(show: false),
                         barGroups: [
@@ -437,7 +520,9 @@ class _AdvisorPageState extends State<AdvisorPage> {
                               barRods: [
                                 BarChartRodData(
                                   toY: data.last3MonthsActual[i],
-                                  color: const Color(0xFF0F1E29),
+                                  color: isDarkMode
+                                      ? Colors.white70
+                                      : const Color(0xFF0F1E29),
                                   width: 14,
                                   borderRadius: const BorderRadius.vertical(
                                     top: Radius.circular(4),
@@ -445,7 +530,7 @@ class _AdvisorPageState extends State<AdvisorPage> {
                                 ),
                                 BarChartRodData(
                                   toY: data.last3MonthsForecast[i],
-                                  color: const Color(0xFFFF6B6B),
+                                  color: primaryAccent,
                                   width: 14,
                                   borderRadius: const BorderRadius.vertical(
                                     top: Radius.circular(4),
@@ -464,29 +549,37 @@ class _AdvisorPageState extends State<AdvisorPage> {
                       Container(
                         width: 10,
                         height: 10,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF0F1E29),
+                        decoration: BoxDecoration(
+                          color: isDarkMode
+                              ? Colors.white70
+                              : const Color(0xFF0F1E29),
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Text(
+                      Text(
                         "Aktual",
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.textTheme.bodyMedium?.color,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Container(
                         width: 10,
                         height: 10,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFF6B6B),
+                        decoration: BoxDecoration(
+                          color: primaryAccent,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Text(
+                      Text(
                         "Prediksi",
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.textTheme.bodyMedium?.color,
+                        ),
                       ),
                     ],
                   ),
@@ -495,21 +588,22 @@ class _AdvisorPageState extends State<AdvisorPage> {
             ),
             const SizedBox(height: 16),
 
-            // --- KARTU 6: TIPS PROAKTIF ---
+            // --- KARTU 6: TIPS PROAKTIF (MODERN BANNER) ---
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: theme.dividerColor.withAlpha(1),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: [primaryAccent.withOpacity(0.1), theme.cardColor],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: primaryAccent.withOpacity(0.2)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.lightbulb_outline,
-                    color: Color(0xFF0F1E29),
-                    size: 20,
-                  ),
+                  Icon(Icons.lightbulb_outline, color: primaryAccent, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text.rich(
