@@ -3,12 +3,15 @@ import 'package:dukunsaldo_fe/database/db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/models/transactions_model.dart';
 import 'package:dukunsaldo_fe/service/finance_analysis_service.dart'; // 👈 Import Service-nya
+import 'package:dukunsaldo_fe/service/pdf_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class ReportScreen extends StatefulWidget {
-  const ReportScreen({super.key});
+  final int? refreshTrigger;
+
+  const ReportScreen({super.key, this.refreshTrigger});
 
   @override
   State<ReportScreen> createState() => _ReportScreenState();
@@ -16,7 +19,7 @@ class ReportScreen extends StatefulWidget {
 
 class _ReportScreenState extends State<ReportScreen> {
   bool _isLoading = true;
-  ReportModel? _reportData; // 👈 Cukup panggil Model-nya
+  ReportModel? _reportData;
 
   final List<Color> _pieColors = [
     const Color(0xFF00875A),
@@ -31,6 +34,14 @@ class _ReportScreenState extends State<ReportScreen> {
   void initState() {
     super.initState();
     _fetchReportData();
+  }
+
+  @override
+  void didUpdateWidget(covariant ReportScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshTrigger != oldWidget.refreshTrigger) {
+      _fetchReportData();
+    }
   }
 
   Future<void> _fetchReportData() async {
@@ -137,7 +148,26 @@ class _ReportScreenState extends State<ReportScreen> {
                   ],
                 ),
                 ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () async {
+                    if (data.currentMonthExpense == 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Belum ada data untuk di-export bulan ini.",
+                          ),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Menyiapkan PDF..."),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                    await PdfService.generateAndExportReportPdf(data);
+                  },
                   icon: const Icon(Icons.picture_as_pdf, size: 14),
                   label: const Text(
                     "PDF",
@@ -567,75 +597,77 @@ class _ReportScreenState extends State<ReportScreen> {
     required bool isDanger,
   }) {
     final isDarkMode = theme.brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(color: borderColor, width: 4),
-          top: BorderSide(
-            color: isDarkMode && !isDanger
-                ? theme.dividerColor
-                : Colors.transparent,
-          ),
-          right: BorderSide(
-            color: isDarkMode && !isDanger
-                ? theme.dividerColor
-                : Colors.transparent,
-          ),
-          bottom: BorderSide(
-            color: isDarkMode && !isDanger
-                ? theme.dividerColor
-                : Colors.transparent,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: bgColor,
+          border: Border(
+            left: BorderSide(color: borderColor, width: 4),
+            top: BorderSide(
+              color: isDarkMode && !isDanger
+                  ? theme.dividerColor
+                  : Colors.transparent,
+            ),
+            right: BorderSide(
+              color: isDarkMode && !isDanger
+                  ? theme.dividerColor
+                  : Colors.transparent,
+            ),
+            bottom: BorderSide(
+              color: isDarkMode && !isDanger
+                  ? theme.dividerColor
+                  : Colors.transparent,
+            ),
           ),
         ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: iconBgColor,
-              borderRadius: BorderRadius.circular(10),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: iconBgColor,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
             ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: theme.primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: theme.primaryColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: isDanger
-                        ? Colors.redAccent
-                        : theme.textTheme.bodyMedium?.color,
-                    fontSize: 11,
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: isDanger
+                          ? Colors.redAccent
+                          : theme.textTheme.bodyMedium?.color,
+                      fontSize: 11,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Text(
-            amount,
-            style: TextStyle(
-              color: isDanger ? Colors.redAccent : theme.primaryColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+            Text(
+              amount,
+              style: TextStyle(
+                color: isDanger ? Colors.redAccent : theme.primaryColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

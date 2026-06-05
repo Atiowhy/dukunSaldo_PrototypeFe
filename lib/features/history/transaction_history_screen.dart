@@ -150,9 +150,36 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 Expanded(
                   child: filteredTransactions.isEmpty
                       ? Center(
-                          child: Text(
-                            "Tidak ada transaksi di kategori ini.",
-                            style: theme.textTheme.bodyMedium,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  color: theme.dividerColor.withOpacity(0.3),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.receipt_long_outlined,
+                                  size: 64,
+                                  color: theme.dividerColor,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              Text(
+                                "Tidak ada transaksi",
+                                style: TextStyle(
+                                  color: theme.primaryColor,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Belum ada transaksi di kategori ini.",
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ],
                           ),
                         )
                       : ListView.builder(

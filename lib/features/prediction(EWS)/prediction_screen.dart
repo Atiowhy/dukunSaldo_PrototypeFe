@@ -371,12 +371,12 @@ class _AdvisorPageState extends State<AdvisorPage> {
                       color: theme.cardColor,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: primaryAccent.withOpacity(0.3),
+                        color: data.trend > 0 ? errorColor.withOpacity(0.3) : primaryAccent.withOpacity(0.3),
                         width: 1.5,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: primaryAccent.withOpacity(0.05),
+                          color: data.trend > 0 ? errorColor.withOpacity(0.05) : primaryAccent.withOpacity(0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -388,17 +388,16 @@ class _AdvisorPageState extends State<AdvisorPage> {
                         Row(
                           children: [
                             Icon(
-                              Icons.trending_up,
-                              color: primaryAccent,
+                              data.trend > 0 ? Icons.trending_up : Icons.trending_down,
+                              color: data.trend > 0 ? errorColor : primaryAccent,
                               size: 18,
                             ),
                             const SizedBox(width: 8),
-                            // 👇 DIPERBAIKI: Dibungkus Expanded dan Ellipsis
                             Expanded(
                               child: Text(
-                                "Trend (Kenaikan)",
+                                data.trend > 0 ? "Trend (Kenaikan)" : "Trend (Penurunan)",
                                 style: TextStyle(
-                                  color: primaryAccent,
+                                  color: data.trend > 0 ? errorColor : primaryAccent,
                                   fontSize: 12,
                                 ),
                                 maxLines: 1,
@@ -409,9 +408,9 @@ class _AdvisorPageState extends State<AdvisorPage> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          "${data.trend >= 0 ? '+' : ''} ${formatCompact(data.trend)}",
+                          "${data.trend > 0 ? '+' : '-'} ${formatCompact(data.trend.abs())}",
                           style: TextStyle(
-                            color: primaryAccent,
+                            color: data.trend > 0 ? errorColor : primaryAccent,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
@@ -421,7 +420,7 @@ class _AdvisorPageState extends State<AdvisorPage> {
                           "Laju akselerasi pengeluaran variabel.",
                           style: TextStyle(
                             color: isDarkMode
-                                ? primaryAccent.withOpacity(0.8)
+                                ? (data.trend > 0 ? errorColor.withOpacity(0.8) : primaryAccent.withOpacity(0.8))
                                 : theme.textTheme.bodyMedium?.color,
                             fontSize: 11,
                           ),

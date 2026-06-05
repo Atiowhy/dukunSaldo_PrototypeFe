@@ -179,8 +179,9 @@ class _RecommendationPageState extends State<RecommendationPage> {
               title: "Gaya Hidup",
               badgeText: "Urgent",
               badgeColor: const Color(0xFFA00000),
-              description:
-                  "Pengeluaran Food & Beverage (termasuk kopi harian) ${data.lifestyleIncreasePercent > 0 ? 'meningkat ${data.lifestyleIncreasePercent.toStringAsFixed(0)}%' : 'mencapai ${formatRupiah(data.lifestyleSavings * 5)}'} bulan ini. Coba batasi jajan di luar minggu ini untuk menghemat ${formatK(data.lifestyleSavings > 0 ? data.lifestyleSavings : 150000)}.",
+              description: data.lifestyleSavings > 0
+                  ? "Pengeluaran Food & Beverage (termasuk kopi harian) ${data.lifestyleIncreasePercent > 0 ? 'meningkat ${data.lifestyleIncreasePercent.toStringAsFixed(0)}%' : 'mencapai ${formatRupiah(data.lifestyleSavings * 5)}'} bulan ini. Coba batasi jajan di luar minggu ini untuk menghemat ${formatK(data.lifestyleSavings)}."
+                  : "Pengeluaran makanan bulan ini masih aman atau belum ada data. Teruskan kebiasaan berhematmu!",
               btn1Text: "Terapkan Saran",
               btn2Text: "Ingatkan Saya",
             ),
@@ -197,8 +198,9 @@ class _RecommendationPageState extends State<RecommendationPage> {
               title: "Subscription Management",
               badgeText: "Optimasi",
               badgeColor: const Color(0xFF5A6B82),
-              description:
-                  "Ditemukan ${data.subscriptionCount} langganan layanan digital/streaming yang terdeteksi. Potensi penghematan ${formatK(data.subscriptionSavings > 0 ? data.subscriptionSavings : 75000)} per bulan jika ada yang dinonaktifkan.",
+              description: data.subscriptionCount > 0
+                  ? "Ditemukan ${data.subscriptionCount} langganan layanan digital/streaming yang terdeteksi. Potensi penghematan ${formatK(data.subscriptionSavings)} per bulan jika ada yang dinonaktifkan."
+                  : "Belum ada pengeluaran langganan digital yang membebani bulan ini. Pastikan tidak ada auto-debet terselubung!",
               btn1Text: "Kelola Langganan",
               btn2Text: "Nanti",
             ),
@@ -215,8 +217,9 @@ class _RecommendationPageState extends State<RecommendationPage> {
               title: "Tabungan",
               badgeText: "Growth",
               badgeColor: const Color(0xFF005E2D),
-              description:
-                  "Kamu punya potensi surplus saldo bulan ini. Masukkan ${formatK(data.savingsTarget > 0 ? data.savingsTarget : 500000)} ke tabungan darurat untuk capai target lebih cepat.",
+              description: data.savingsTarget > 0
+                  ? "Kamu punya potensi surplus saldo bulan ini. Masukkan ${formatK(data.savingsTarget)} ke tabungan darurat untuk capai target lebih cepat."
+                  : "Saat ini pengeluaranmu cukup besar dibanding pemasukan bulan ini, atau belum ada surplus. Coba kurangi pengeluaran agar bisa menabung!",
               btn1Text: "Pindahkan Sekarang",
               btn2Text: "Ingatkan Besok",
             ),
@@ -249,11 +252,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        formatRupiah(
-                          data.totalPotentialSavings > 0
-                              ? data.totalPotentialSavings
-                              : 899000,
-                        ),
+                        formatRupiah(data.totalPotentialSavings),
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -273,9 +272,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: LinearProgressIndicator(
-                      value: data.efficiencyProgress > 0
-                          ? data.efficiencyProgress
-                          : 0.65, // Default 65% jika kosong
+                      value: data.totalPotentialSavings > 0 ? data.efficiencyProgress : 0.0,
                       backgroundColor: Colors.grey[300],
                       color: const Color(0xFF00875A),
                       minHeight: 8,
@@ -283,7 +280,9 @@ class _RecommendationPageState extends State<RecommendationPage> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    "${((data.efficiencyProgress > 0 ? data.efficiencyProgress : 0.65) * 100).toStringAsFixed(0)}% dari target efisiensi keuangan Anda tercapai.",
+                    data.totalPotentialSavings > 0
+                        ? "${(data.efficiencyProgress * 100).toStringAsFixed(0)}% dari target efisiensi keuangan Anda tercapai."
+                        : "Belum ada cukup data untuk menghitung efisiensi bulan ini.",
                     style: const TextStyle(color: Colors.grey, fontSize: 11),
                   ),
                 ],

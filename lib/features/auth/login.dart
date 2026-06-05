@@ -6,6 +6,7 @@ import 'package:dukunsaldo_fe/features/auth/register.dart';
 import 'package:dukunsaldo_fe/features/home/home_screen.dart';
 // import 'package:dukunsaldo_fe/features/home/home_screen.dart';
 import 'package:dukunsaldo_fe/models/model_users.dart';
+import 'package:dukunsaldo_fe/models/log_model.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../../core/widgets/custom_text_field.dart';
@@ -49,6 +50,16 @@ class _LoginState extends State<Login> {
         pengguna.username,
         pengguna.email,
       );
+
+      await DatabaseHelper.instance.insertLog(LogModel(
+        userId: pengguna.id!,
+        title: "Login Berhasil",
+        message: "Selamat datang kembali, ${pengguna.username}!",
+        date: DateTime.now().toIso8601String(),
+        type: 'system',
+      ));
+
+      if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => HomePage()),

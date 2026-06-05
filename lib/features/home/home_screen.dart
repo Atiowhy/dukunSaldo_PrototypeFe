@@ -2,6 +2,8 @@ import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:dukunsaldo_fe/core/providers/theme_provider.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/features/auth/login.dart';
+import 'package:dukunsaldo_fe/features/notification/notification_screen.dart';
+import 'package:dukunsaldo_fe/features/profile/profile_screen.dart';
 import 'package:dukunsaldo_fe/features/report/report_screen.dart';
 import 'package:dukunsaldo_fe/features/transactions/add_transaction_screen.dart';
 import 'package:dukunsaldo_fe/models/summary_model.dart';
@@ -37,6 +39,8 @@ class _HomePageState extends State<HomePage> {
 
   // 👇 Variabel baru untuk melacak kesiapan DES (min 2 bulan)
   int _uniqueMonthsCount = 0;
+  int _notificationCount = 0;
+  bool _isBalanceHidden = false;
 
   void _onItemTapped(int index) {
     setState(() {
@@ -161,10 +165,27 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _fetchNotifications() async {
+    int activeUserId = Preference.userId;
+    final db = await DatabaseHelper.instance.database;
+    final List<Map<String, dynamic>> logs = await db.query(
+      'logs',
+      where: 'userId = ?',
+      whereArgs: [activeUserId],
+    );
+    if (mounted) {
+      setState(() {
+        _notificationCount = logs.length;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _isBalanceHidden = Preference.isBalanceHidden;
     _fetchTransactions();
+    _fetchNotifications();
   }
 
   @override
@@ -177,7 +198,7 @@ class _HomePageState extends State<HomePage> {
       _buildHomeContent(theme, isDarkMode),
       AdvisorPage(refreshTrigger: _refreshCounter),
       RecommendationPage(refreshTrigger: _refreshCounter),
-      ReportScreen(),
+      ReportScreen(refreshTrigger: _refreshCounter),
     ];
 
     final String userEmail = Preference.email.isEmpty
@@ -213,8 +234,27 @@ class _HomePageState extends State<HomePage> {
         elevation: 0,
         iconTheme: IconThemeData(color: theme.primaryColor),
         actions: [
-          Icon(Icons.notifications_active, color: theme.primaryColor),
-          const SizedBox(width: 16),
+          IconButton(
+            icon: _notificationCount > 0
+                ? Badge(
+                    label: Text(_notificationCount.toString()),
+                    backgroundColor: Colors.redAccent,
+                    child: const Icon(Icons.notifications_active),
+                  )
+                : const Icon(Icons.notifications_none),
+            color: theme.primaryColor,
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationScreen(),
+                ),
+              );
+              // Refresh notifikasi setelah kembali dari halaman notifikasi (jika ada fitur baca/hapus nanti)
+              _fetchNotifications();
+            },
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       drawer: _buildDrawer(
@@ -268,6 +308,7 @@ class _HomePageState extends State<HomePage> {
             );
             if (isDataChanged == true) {
               _fetchTransactions();
+              _fetchNotifications();
             }
           },
         ),
@@ -354,6 +395,23 @@ class _HomePageState extends State<HomePage> {
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
+            leading: Icon(Icons.person, color: theme.primaryColor),
+            title: Text(
+              "Profil Pengguna",
+              style: TextStyle(color: theme.primaryColor),
+            ),
+            onTap: () {
+              Navigator.pop(context); // Close drawer
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              ).then((_) {
+                // Refresh if username changed
+                setState(() {});
+              });
+            },
+          ),
+          ListTile(
             leading: Icon(Icons.settings, color: theme.primaryColor),
             title: Text(
               "Pengaturan",
@@ -361,11 +419,7 @@ class _HomePageState extends State<HomePage> {
             ),
             onTap: () => Navigator.pop(context),
           ),
-          ListTile(
-            leading: Icon(Icons.logout_outlined, color: theme.primaryColor),
-            title: Text("Logout", style: TextStyle(color: theme.primaryColor)),
-            onTap: _logOut,
-          ),
+
           ListTile(
             leading: Icon(Icons.storage, color: theme.primaryColor),
             title: Text(
@@ -460,18 +514,35 @@ class _HomePageState extends State<HomePage> {
                     child: Center(
                       child: Column(
                         children: [
-                          Icon(
-                            Icons.receipt_long_outlined,
-                            size: 48,
-                            color: theme.dividerColor,
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: theme.dividerColor.withOpacity(0.3),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.receipt_long_outlined,
+                              size: 64,
+                              color: theme.dividerColor,
+                            ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 24),
                           Text(
-                            "Belum ada transaksi.\nKlik tombol + untuk menambahkan!",
+                            "Belum ada transaksi",
+                            style: TextStyle(
+                              color: theme.primaryColor,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Mulai catat pemasukan dan pengeluaran\nAnda dengan menekan tombol + di bawah.",
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: theme.textTheme.bodyMedium?.color,
                               fontSize: 14,
+                              height: 1.5,
                             ),
                           ),
                         ],
@@ -800,27 +871,56 @@ class _HomePageState extends State<HomePage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  "Total Saldo Saat Ini",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      "Total Saldo Saat Ini",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
+                  GestureDetector(
+                    onTap: () async {
+                      setState(() {
+                        _isBalanceHidden = !_isBalanceHidden;
+                      });
+                      await Preference.setIsBalanceHidden(_isBalanceHidden);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _isBalanceHidden
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               Text(
-                "Rp ${formatRupiah(_currentBalance.toInt())}",
+                _isBalanceHidden
+                    ? "Rp ***.***"
+                    : "Rp ${formatRupiah(_currentBalance.toInt())}",
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 32,
@@ -1111,7 +1211,9 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "Rp ${formatCompact(_totalIncome)}",
+                  _isBalanceHidden
+                      ? "Rp ***.***"
+                      : "Rp ${formatCompact(_totalIncome)}",
                   style: TextStyle(
                     color: incomeColor,
                     fontSize: 18,
@@ -1176,7 +1278,9 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "Rp ${formatCompact(_totalExpense)}",
+                  _isBalanceHidden
+                      ? "Rp ***.***"
+                      : "Rp ${formatCompact(_totalExpense)}",
                   style: TextStyle(
                     color: expenseColor,
                     fontSize: 18,

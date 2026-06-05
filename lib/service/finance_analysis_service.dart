@@ -232,7 +232,9 @@ class FinanceAnalysisService {
   ) {
     DateTime now = DateTime.now();
     int currentMonth = now.month;
+    int currentYear = now.year;
     int lastMonth = currentMonth == 1 ? 12 : currentMonth - 1;
+    int lastMonthYear = currentMonth == 1 ? currentYear - 1 : currentYear;
 
     double currentFood = 0;
     double lastFood = 0;
@@ -242,12 +244,12 @@ class FinanceAnalysisService {
 
     for (var trx in transactions) {
       DateTime date = DateTime.tryParse(trx.date) ?? now;
-      if (date.month == currentMonth) {
+      if (date.month == currentMonth && date.year == currentYear) {
         if (trx.type == 'income') currentIncome += trx.amount;
         if (trx.type == 'expense') currentExpense += trx.amount;
         if (trx.category == 'Food') currentFood += trx.amount;
         if (trx.category == 'Digital') currentDigital += trx.amount;
-      } else if (date.month == lastMonth) {
+      } else if (date.month == lastMonth && date.year == lastMonthYear) {
         if (trx.category == 'Food') lastFood += trx.amount;
       }
     }
@@ -317,7 +319,7 @@ class FinanceAnalysisService {
           ((tempCurrentExpense - tempLastMonthExpense) / tempLastMonthExpense) *
           100;
       calculatedAccuracy =
-          95; // AI sudah memiliki cukup data untuk prediksi akurat
+          100; // AI sudah memiliki cukup data untuk prediksi akurat
     } else if (tempCurrentExpense > 0 || tempLastMonthExpense > 0) {
       // Jika baru ada data 1 bulan saja, AI sedang dalam masa "belajar"
       calculatedAccuracy = 45;
@@ -340,7 +342,7 @@ class FinanceAnalysisService {
       currentMonthExpense: tempCurrentExpense,
       lastMonthExpense: tempLastMonthExpense,
       expenseTrend: trend,
-      accuracyScore: calculatedAccuracy, // 👈 Sekarang akurasinya dinamis!
+      accuracyScore: calculatedAccuracy,
       topCategories: sortedCategories,
       categoryPercentages: percentages,
     );

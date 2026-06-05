@@ -2,6 +2,7 @@ import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:dukunsaldo_fe/database/db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/models/transactions_model.dart';
+import 'package:dukunsaldo_fe/models/log_model.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -131,6 +132,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     });
 
     if (success) {
+      await DatabaseHelper.instance.insertLog(LogModel(
+        userId: Preference.userId,
+        title: widget.transaction == null ? "Transaksi Baru" : "Update Transaksi",
+        message: "Anda mencatat ${_selectedType == 'income' ? 'pemasukan' : 'pengeluaran'} sebesar Rp $amount untuk kategori $_selectedCategory.",
+        date: DateTime.now().toIso8601String(),
+        type: _selectedType,
+      ));
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
