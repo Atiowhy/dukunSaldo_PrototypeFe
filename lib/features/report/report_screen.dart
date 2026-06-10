@@ -248,7 +248,7 @@ class _ReportScreenState extends State<ReportScreen> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          data.expenseTrend == 0
+                          data.lastMonthExpense == 0
                               ? "Belum ada data bulan lalu"
                               : "${data.expenseTrend.abs().toStringAsFixed(1)}% ${data.expenseTrend <= 0 ? 'lebih rendah' : 'lebih tinggi'} dari bulan lalu",
                           style: TextStyle(

@@ -43,6 +43,8 @@ dependencies:
   sqlite_viewer2: ^2.0.0
   pdf: ^3.12.0
   printing: ^5.14.3
+  lottie: ^3.3.3
+  flutter_animate: ^4.5.2
 
 dev_dependencies:
   flutter_test:
@@ -71,6 +73,9 @@ flutter:
     - assets/image/splash.png
     - assets/image/logo2.png
     - assets/image/arrow.png
+    - assets/image/orang.jpg
+    - assets/image/ciks.jpeg
+    - assets/lottie/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

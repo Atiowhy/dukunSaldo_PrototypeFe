@@ -48,6 +48,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _selectedCategory = widget.transaction!.category;
       _selectedDate =
           DateTime.tryParse(widget.transaction!.date) ?? DateTime.now();
+      _isSubscription = widget.transaction!.isSubscription;
     }
   }
 
@@ -113,6 +114,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       amount: amount,
       type: _selectedType,
       date: _selectedDate.toIso8601String(),
+      isSubscription: _isSubscription,
     );
 
     bool success = false;

@@ -1,8 +1,8 @@
+import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:dukunsaldo_fe/database/db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/features/auth/login.dart';
 import 'package:dukunsaldo_fe/models/model_users.dart';
-import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -14,6 +14,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _targetController = TextEditingController();
   bool _isLoading = false;
   String _currentName = '';
 
@@ -61,9 +62,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       final currentSaved = totalIncome - totalExpense;
-      // Target dinamis: kelipatan 5 juta terdekat di atas saldo saat ini
-      double target = ((currentSaved ~/ 5000000) + 1) * 5000000.0;
-      if (target <= 0) target = 5000000.0; // Minimal target
+      // Target diambil dinamis dari pengaturan pengguna (default 5.000.000)
+      double target = Preference.savingsTarget;
 
       double progress = currentSaved / target;
       if (progress < 0) progress = 0;
@@ -98,6 +98,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _targetController.dispose();
     super.dispose();
   }
 
@@ -109,6 +110,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ).showSnackBar(const SnackBar(content: Text("Nama tidak boleh kosong")));
       return;
     }
+
+    final newTargetRaw = _targetController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final newTarget = double.tryParse(newTargetRaw) ?? Preference.savingsTarget;
 
     setState(() {
       _isLoading = true;
@@ -139,10 +143,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (success) {
         await Preference.setUsername(newName);
+        await Preference.setSavingsTarget(newTarget);
         if (mounted) {
           setState(() {
             _currentName = newName;
+            _savingsTarget = newTarget;
           });
+          _loadSavingsData(); // Reload progress
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Profil berhasil diperbarui"),
@@ -181,6 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showEditProfileDialog() {
     _nameController.text = _currentName;
+    _targetController.text = _savingsTarget.toInt().toString();
     showDialog(
       context: context,
       builder: (context) {
@@ -219,6 +227,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: _nameController,
+                    style: TextStyle(color: theme.primaryColor),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: theme.scaffoldBackgroundColor,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: theme.dividerColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: primaryAccent, width: 2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Target Tabungan (Rp)",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: theme.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _targetController,
+                    keyboardType: TextInputType.number,
                     style: TextStyle(color: theme.primaryColor),
                     decoration: InputDecoration(
                       filled: true,
@@ -539,24 +574,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Icons.lock_outline,
               "Keamanan & PIN",
               "Protokol biometrik dan 2FA",
-            ),
-            _buildListTile(
-              theme,
-              Icons.workspace_premium_outlined,
-              "Manajemen Langganan",
-              "Fitur AI Advisor dan Pro",
-            ),
-            _buildListTile(
-              theme,
-              Icons.notifications_outlined,
-              "Pengaturan Notifikasi",
-              "Kelola laporan dan peringatan EWS",
-            ),
-            _buildListTile(
-              theme,
-              Icons.headset_mic_outlined,
-              "Bantuan & Dukungan",
-              "FAQ dan layanan chat bantuan",
             ),
 
             const SizedBox(height: 24),

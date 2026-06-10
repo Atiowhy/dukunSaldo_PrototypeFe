@@ -18,6 +18,7 @@ class AdvisorPage extends StatefulWidget {
 class _AdvisorPageState extends State<AdvisorPage> {
   bool _isLoading = true;
   AdvisorModel? _advisorData;
+  double _currentBalance = 0;
 
   @override
   void initState() {
@@ -235,15 +236,29 @@ class _AdvisorPageState extends State<AdvisorPage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      Text(
-                        formatRupiah(data.nextMonthForecast),
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: -1,
+                      TweenAnimationBuilder<double>(
+                        tween: Tween<double>(
+                          begin: 0,
+                          end: data
+                              .nextMonthForecast, // Target animasinya adalah nilai forecast
                         ),
+                        duration: const Duration(milliseconds: 1500),
+                        curve: Curves.easeOutExpo,
+                        builder: (context, value, child) {
+                          return Text(
+                            formatRupiah(
+                              value,
+                            ), // 'value' sudah berupa double, langsung masukkan ke formatRupiah
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: -1,
+                            ),
+                          );
+                        },
                       ),
+
                       const SizedBox(height: 12),
                       const Text(
                         "Dihitung berdasarkan Double Exponential Smoothing",
@@ -371,12 +386,16 @@ class _AdvisorPageState extends State<AdvisorPage> {
                       color: theme.cardColor,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: data.trend > 0 ? errorColor.withOpacity(0.3) : primaryAccent.withOpacity(0.3),
+                        color: data.trend > 0
+                            ? errorColor.withOpacity(0.3)
+                            : primaryAccent.withOpacity(0.3),
                         width: 1.5,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: data.trend > 0 ? errorColor.withOpacity(0.05) : primaryAccent.withOpacity(0.05),
+                          color: data.trend > 0
+                              ? errorColor.withOpacity(0.05)
+                              : primaryAccent.withOpacity(0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -388,16 +407,24 @@ class _AdvisorPageState extends State<AdvisorPage> {
                         Row(
                           children: [
                             Icon(
-                              data.trend > 0 ? Icons.trending_up : Icons.trending_down,
-                              color: data.trend > 0 ? errorColor : primaryAccent,
+                              data.trend > 0
+                                  ? Icons.trending_up
+                                  : Icons.trending_down,
+                              color: data.trend > 0
+                                  ? errorColor
+                                  : primaryAccent,
                               size: 18,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                data.trend > 0 ? "Trend (Kenaikan)" : "Trend (Penurunan)",
+                                data.trend > 0
+                                    ? "Trend (Kenaikan)"
+                                    : "Trend (Penurunan)",
                                 style: TextStyle(
-                                  color: data.trend > 0 ? errorColor : primaryAccent,
+                                  color: data.trend > 0
+                                      ? errorColor
+                                      : primaryAccent,
                                   fontSize: 12,
                                 ),
                                 maxLines: 1,
@@ -420,7 +447,9 @@ class _AdvisorPageState extends State<AdvisorPage> {
                           "Laju akselerasi pengeluaran variabel.",
                           style: TextStyle(
                             color: isDarkMode
-                                ? (data.trend > 0 ? errorColor.withOpacity(0.8) : primaryAccent.withOpacity(0.8))
+                                ? (data.trend > 0
+                                      ? errorColor.withOpacity(0.8)
+                                      : primaryAccent.withOpacity(0.8))
                                 : theme.textTheme.bodyMedium?.color,
                             fontSize: 11,
                           ),

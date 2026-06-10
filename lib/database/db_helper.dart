@@ -24,7 +24,10 @@ class DatabaseHelper {
 
     return await openDatabase(
       path, 
-      version: 2, 
+      version: 3, 
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -39,9 +42,13 @@ class DatabaseHelper {
           title TEXT NOT NULL,
           message TEXT NOT NULL,
           date TEXT NOT NULL,
-          type TEXT NOT NULL
+          type TEXT NOT NULL,
+          FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
         )
       ''');
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE transactions ADD COLUMN isSubscription INTEGER DEFAULT 0');
     }
   }
 
@@ -65,7 +72,9 @@ class DatabaseHelper {
         category TEXT NOT NULL,
         amount REAL NOT NULL,
         type TEXT NOT NULL,
-        date TEXT NOT NULL
+        date TEXT NOT NULL,
+        isSubscription INTEGER DEFAULT 0,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
 
@@ -77,7 +86,8 @@ class DatabaseHelper {
         title TEXT NOT NULL,
         message TEXT NOT NULL,
         date TEXT NOT NULL,
-        type TEXT NOT NULL
+        type TEXT NOT NULL,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
   }

@@ -78,7 +78,7 @@ class PdfService {
                     ),
                     pw.SizedBox(height: 8),
                     pw.Text(
-                      data.expenseTrend == 0
+                      data.lastMonthExpense == 0
                           ? "Belum ada perbandingan data bulan lalu"
                           : "${data.expenseTrend.abs().toStringAsFixed(1)}% ${data.expenseTrend <= 0 ? 'lebih rendah' : 'lebih tinggi'} dari bulan lalu",
                       style: pw.TextStyle(

@@ -70,7 +70,7 @@ class FinanceAnalysisService {
   static SummaryModel calculateDashboard(List<TransactionModel> transactions) {
     double tempIncome = 0;
     double tempExpense = 0;
-    Map<int, double> monthlyNet = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+    Map<String, double> monthlyNet = {};
 
     for (var trx in transactions) {
       bool isIncome = trx.type == 'income';
@@ -82,25 +82,67 @@ class FinanceAnalysisService {
       }
 
       DateTime date = DateTime.tryParse(trx.date) ?? DateTime.now();
-      if (monthlyNet.containsKey(date.month)) {
-        if (isIncome) {
-          monthlyNet[date.month] = monthlyNet[date.month]! + trx.amount;
-        } else {
-          monthlyNet[date.month] = monthlyNet[date.month]! - trx.amount;
-        }
+      String monthKey = "${date.year}-${date.month.toString().padLeft(2, '0')}";
+      
+      if (!monthlyNet.containsKey(monthKey)) {
+        monthlyNet[monthKey] = 0.0;
+      }
+
+      if (isIncome) {
+        monthlyNet[monthKey] = monthlyNet[monthKey]! + trx.amount;
+      } else {
+        monthlyNet[monthKey] = monthlyNet[monthKey]! - trx.amount;
       }
     }
 
     List<FlSpot> spots = [];
     List<double> actualCumulative = [];
+    List<String> chartLabels = [];
     double cumulative = 0;
 
-    for (int i = 1; i <= 5; i++) {
-      cumulative += (monthlyNet[i] ?? 0);
-      double scaledValue = cumulative / 1000000;
+    List<String> sortedMonths = monthlyNet.keys.toList()..sort();
+    List<String> monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+    
+    int currentY = DateTime.now().year;
+    int currentM = DateTime.now().month;
+    
+    // Construct continuous timeline
+    if (sortedMonths.isNotEmpty) {
+      String firstMonthStr = sortedMonths.first;
+      String lastMonthStr = sortedMonths.last;
+      
+      int startYear = int.parse(firstMonthStr.split('-')[0]);
+      int startMonth = int.parse(firstMonthStr.split('-')[1]);
+      int endYear = int.parse(lastMonthStr.split('-')[0]);
+      int endMonth = int.parse(lastMonthStr.split('-')[1]);
+      
+      currentY = startYear;
+      currentM = startMonth;
+      int index = 0;
+      
+      while (currentY < endYear || (currentY == endYear && currentM <= endMonth)) {
+        String key = "$currentY-${currentM.toString().padLeft(2, '0')}";
+        double netValue = monthlyNet[key] ?? 0.0;
+        
+        cumulative += netValue;
+        double scaledValue = cumulative / 1000000;
 
-      spots.add(FlSpot((i - 1).toDouble(), scaledValue));
-      actualCumulative.add(scaledValue);
+        spots.add(FlSpot(index.toDouble(), scaledValue));
+        actualCumulative.add(scaledValue);
+        chartLabels.add(monthNames[currentM - 1]);
+        
+        index++;
+        currentM++;
+        if (currentM > 12) {
+          currentM = 1;
+          currentY++;
+        }
+      }
+    } else {
+      // Fallback for empty data
+      spots.add(const FlSpot(0, 0));
+      actualCumulative.add(0);
+      chartLabels.add(monthNames[currentM - 1]);
     }
 
     List<FlSpot> predictionSpots = [];
@@ -125,6 +167,14 @@ class FinanceAnalysisService {
       predictionSpots.add(lastReal);
       predictionSpots.add(FlSpot(lastReal.x + 1, forecastMonth6));
       predictionSpots.add(FlSpot(lastReal.x + 2, forecastMonth7));
+      
+      // Append prediction months to labels
+      int nextM1 = currentM;
+      int nextM2 = currentM + 1;
+      if (nextM1 > 12) nextM1 -= 12;
+      if (nextM2 > 12) nextM2 -= 12;
+      chartLabels.add(monthNames[nextM1 - 1]);
+      chartLabels.add(monthNames[nextM2 - 1]);
     }
 
     return SummaryModel(
@@ -133,6 +183,7 @@ class FinanceAnalysisService {
       currentBalance: tempIncome - tempExpense,
       realChartSpots: spots,
       predictChartSpots: predictionSpots,
+      chartLabels: chartLabels,
     );
   }
 
@@ -166,9 +217,32 @@ class FinanceAnalysisService {
     }
 
     List<String> sortedMonths = monthlyExpense.keys.toList()..sort();
-    List<double> actualExpenses = sortedMonths
-        .map((key) => monthlyExpense[key]!)
-        .toList();
+    
+    // 1. Build a continuous list of expenses filling gaps with 0.0
+    List<double> actualExpenses = [];
+    if (sortedMonths.isNotEmpty) {
+      String firstMonthStr = sortedMonths.first;
+      String lastMonthStr = sortedMonths.last;
+      
+      int startYear = int.parse(firstMonthStr.split('-')[0]);
+      int startMonth = int.parse(firstMonthStr.split('-')[1]);
+      int endYear = int.parse(lastMonthStr.split('-')[0]);
+      int endMonth = int.parse(lastMonthStr.split('-')[1]);
+      
+      int currentY = startYear;
+      int currentM = startMonth;
+      
+      while (currentY < endYear || (currentY == endYear && currentM <= endMonth)) {
+        String key = "$currentY-${currentM.toString().padLeft(2, '0')}";
+        actualExpenses.add(monthlyExpense[key] ?? 0.0);
+        
+        currentM++;
+        if (currentM > 12) {
+          currentM = 1;
+          currentY++;
+        }
+      }
+    }
 
     double alpha = 0.5;
     double beta = 0.3;
@@ -241,12 +315,20 @@ class FinanceAnalysisService {
     double currentDigital = 0;
     double currentIncome = 0;
     double currentExpense = 0;
+    int actualSubCount = 0;
+    double actualSubTotal = 0;
 
     for (var trx in transactions) {
       DateTime date = DateTime.tryParse(trx.date) ?? now;
       if (date.month == currentMonth && date.year == currentYear) {
         if (trx.type == 'income') currentIncome += trx.amount;
-        if (trx.type == 'expense') currentExpense += trx.amount;
+        if (trx.type == 'expense') {
+          currentExpense += trx.amount;
+          if (trx.isSubscription) {
+            actualSubCount++;
+            actualSubTotal += trx.amount;
+          }
+        }
         if (trx.category == 'Food') currentFood += trx.amount;
         if (trx.category == 'Digital') currentDigital += trx.amount;
       } else if (date.month == lastMonth && date.year == lastMonthYear) {
@@ -260,8 +342,8 @@ class FinanceAnalysisService {
     }
     double lifestyleSavings = currentFood > 0 ? currentFood * 0.2 : 0;
 
-    int subCount = currentDigital > 0 ? (currentDigital / 75000).ceil() : 0;
-    double subscriptionSavings = currentDigital > 0 ? currentDigital * 0.3 : 0;
+    int subCount = actualSubCount;
+    double subscriptionSavings = actualSubTotal;
 
     double surplus = currentIncome - currentExpense;
     double savingsTarget = surplus > 0 ? surplus * 0.3 : 0;
@@ -313,15 +395,15 @@ class FinanceAnalysisService {
     double trend = 0;
     int calculatedAccuracy = 0; // Default 0% jika database benar-benar kosong
 
-    if (tempLastMonthExpense > 0 && tempCurrentExpense > 0) {
-      // Jika ada data bulan lalu DAN bulan ini, algoritma bisa membandingkan
+    if (tempLastMonthExpense > 0) {
+      // Jika ada data bulan lalu, algoritma bisa membandingkan
       trend =
           ((tempCurrentExpense - tempLastMonthExpense) / tempLastMonthExpense) *
           100;
       calculatedAccuracy =
-          100; // AI sudah memiliki cukup data untuk prediksi akurat
-    } else if (tempCurrentExpense > 0 || tempLastMonthExpense > 0) {
-      // Jika baru ada data 1 bulan saja, AI sedang dalam masa "belajar"
+          tempCurrentExpense > 0 ? 100 : 45; // Akurasi penuh jika data berkesinambungan
+    } else if (tempCurrentExpense > 0) {
+      // Jika baru ada data bulan ini saja, AI sedang dalam masa "belajar"
       calculatedAccuracy = 45;
     }
 
