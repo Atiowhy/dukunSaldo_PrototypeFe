@@ -78,11 +78,30 @@ class _AdvisorPageState extends State<AdvisorPage> {
   }
 
   String formatCompact(double amount) {
-    if (amount >= 1000000) {
-      return 'Rp ${(amount / 1000000).toStringAsFixed(1)}Jt';
+    bool isNegative = amount < 0;
+    double absAmount = amount.abs();
+    String prefix = isNegative ? "-" : "";
+    if (absAmount >= 1000000) {
+      String val = (absAmount / 1000000).toStringAsFixed(2);
+      if (val.endsWith('.00')) {
+        val = val.substring(0, val.length - 3);
+      } else if (val.endsWith('0')) {
+        val = val.substring(0, val.length - 1);
+      }
+
+      return 'Rp $prefix${val}Jt';
     }
-    if (amount >= 1000) return 'Rp ${(amount / 1000).toStringAsFixed(1)}Rb';
-    return 'Rp ${amount.toStringAsFixed(0)}';
+    if (absAmount >= 1000) {
+      String val = (absAmount / 1000).toStringAsFixed(2);
+      if (val.endsWith('.00')) {
+        val = val.substring(0, val.length - 3);
+      } else if (val.endsWith('0')) {
+        val = val.substring(0, val.length - 1);
+      }
+
+      return 'Rp $prefix${val}Rb';
+    }
+    return 'Rp $prefix${absAmount.toStringAsFixed(0)}';
   }
 
   @override
@@ -646,11 +665,17 @@ class _AdvisorPageState extends State<AdvisorPage> {
                             ),
                           ),
                           TextSpan(
-                            text: data.trend > 0
-                                ? "Berdasarkan grafik tren, pengeluaran Anda cenderung naik ${formatCompact(data.trend)} tiap bulannya. Pertimbangkan untuk membatasi belanja tersier bulan depan."
-                                : (data.trend < 0
-                                      ? "Berdasarkan grafik tren, pengeluaran Anda berhasil ditekan turun ${formatCompact(data.trend.abs())} tiap bulannya. Pertahankan kebiasaan baik ini!"
-                                      : "Berdasarkan grafik tren, pengeluaran Anda cenderung stabil tiap bulannya. Terus pertahankan pengelolaan keuangan Anda!"),
+                            text: data.isDeficit
+                                ? "Peringatan! Walaupun tren pengeluaran Anda ${data.trend > 0
+                                      ? 'naik'
+                                      : data.trend < 0
+                                      ? 'menurun'
+                                      : 'stabil'}, prediksi pengeluaran bulan depan melampaui sisa saldo. Segera kurangi pengeluaran agar terhindar dari defisit berlanjut!"
+                                : (data.trend > 0
+                                      ? "Berdasarkan grafik tren, pengeluaran Anda cenderung naik ${formatCompact(data.trend)} tiap bulannya. Pertimbangkan untuk membatasi belanja tersier bulan depan."
+                                      : (data.trend < 0
+                                            ? "Berdasarkan grafik tren, pengeluaran Anda berhasil ditekan turun ${formatCompact(data.trend.abs())} tiap bulannya. Pertahankan kebiasaan baik ini!"
+                                            : "Berdasarkan grafik tren, pengeluaran Anda cenderung stabil tiap bulannya. Terus pertahankan pengelolaan keuangan Anda!")),
                             style: const TextStyle(fontSize: 13, height: 1.4),
                           ),
                         ],

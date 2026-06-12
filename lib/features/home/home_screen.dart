@@ -71,14 +71,26 @@ class _HomePageState extends State<HomePage> {
   }
 
   String formatCompact(double amount) {
-    if (amount >= 1000000000) {
-      return '${(amount / 1000000000).toStringAsFixed(1)}M';
-    } else if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1)}Jt';
-    } else if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(1)}Rb';
+    bool isNegative = amount < 0;
+    double absAmount = amount.abs();
+    String prefix = isNegative ? "-" : "";
+    if (absAmount >= 1000000000) {
+      String val = (absAmount / 1000000000).toStringAsFixed(2);
+      if (val.endsWith('.00')) val = val.substring(0, val.length - 3);
+      else if (val.endsWith('0')) val = val.substring(0, val.length - 1);
+      return '$prefix${val}M';
+    } else if (absAmount >= 1000000) {
+      String val = (absAmount / 1000000).toStringAsFixed(2);
+      if (val.endsWith('.00')) val = val.substring(0, val.length - 3);
+      else if (val.endsWith('0')) val = val.substring(0, val.length - 1);
+      return '$prefix${val}Jt';
+    } else if (absAmount >= 1000) {
+      String val = (absAmount / 1000).toStringAsFixed(2);
+      if (val.endsWith('.00')) val = val.substring(0, val.length - 3);
+      else if (val.endsWith('0')) val = val.substring(0, val.length - 1);
+      return '$prefix${val}Rb';
     }
-    return amount.toStringAsFixed(0);
+    return '$prefix${absAmount.toStringAsFixed(0)}';
   }
 
   Future<void> _fetchTransactions() async {
@@ -1105,7 +1117,17 @@ class _HomePageState extends State<HomePage> {
         ? 0
         : _predictChartSpots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
     double maxYValue = maxReal > maxPredict ? maxReal : maxPredict;
-    double calculatedMaxY = (maxYValue * 1.5).clamp(10.0, double.infinity);
+    
+    double minReal = _realChartSpots.isEmpty
+        ? 0
+        : _realChartSpots.map((e) => e.y).reduce((a, b) => a < b ? a : b);
+    double minPredict = _predictChartSpots.isEmpty
+        ? 0
+        : _predictChartSpots.map((e) => e.y).reduce((a, b) => a < b ? a : b);
+    double minYValue = minReal < minPredict ? minReal : minPredict;
+
+    double calculatedMaxY = (maxYValue > 0 ? maxYValue * 1.5 : 0.0).clamp(10.0, double.infinity);
+    double calculatedMinY = minYValue < 0 ? (minYValue * 1.5) : 0.0;
 
     final realBarData = LineChartBarData(
       spots: _realChartSpots,
@@ -1250,7 +1272,7 @@ class _HomePageState extends State<HomePage> {
               height: 160,
               child: LineChart(
                 LineChartData(
-                  minY: 0,
+                  minY: calculatedMinY,
                   maxY: calculatedMaxY,
                   showingTooltipIndicators: [
                     ..._realChartSpots.map(
