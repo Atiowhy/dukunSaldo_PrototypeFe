@@ -12,6 +12,8 @@ class AdvisorModel {
   final double deficitAmount;
   final List<double> last3MonthsActual;
   final List<double> last3MonthsForecast;
+  final List<String> last3MonthsLabels;
+  final bool hasEnoughData;
 
   AdvisorModel({
     required this.nextMonthForecast,
@@ -22,6 +24,8 @@ class AdvisorModel {
     required this.deficitAmount,
     required this.last3MonthsActual,
     required this.last3MonthsForecast,
+    required this.last3MonthsLabels,
+    required this.hasEnoughData,
   });
 }
 
@@ -213,6 +217,8 @@ class FinanceAnalysisService {
         deficitAmount: 0,
         last3MonthsActual: [0, 0, 0],
         last3MonthsForecast: [0, 0, 0],
+        last3MonthsLabels: ["-", "-", "-"],
+        hasEnoughData: false,
       );
     }
 
@@ -289,6 +295,22 @@ class FinanceAnalysisService {
             ...historicalForecasts,
           ];
 
+    List<String> monthNamesShort = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+    List<String> last3Labels = ["-", "-", "-"];
+    
+    if (sortedMonths.isNotEmpty) {
+      String lastMonthStr = sortedMonths.last;
+      int endMonth = int.parse(lastMonthStr.split('-')[1]);
+      last3Labels = [];
+      for (int i = 2; i >= 0; i--) {
+        int m = endMonth - i;
+        while (m <= 0) {
+          m += 12;
+        }
+        last3Labels.add(monthNamesShort[m - 1]);
+      }
+    }
+
     return AdvisorModel(
       nextMonthForecast: nextMonthForecast,
       level: level,
@@ -298,6 +320,8 @@ class FinanceAnalysisService {
       deficitAmount: deficitAmount,
       last3MonthsActual: last3Actual,
       last3MonthsForecast: last3Forecast,
+      last3MonthsLabels: last3Labels,
+      hasEnoughData: actualExpenses.length >= 2,
     );
   }
 

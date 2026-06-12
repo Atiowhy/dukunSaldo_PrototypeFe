@@ -12,6 +12,7 @@ import 'package:dukunsaldo_fe/service/finance_analysis_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'package:sqlite_viewer2/sqlite_viewer.dart';
 
@@ -532,7 +533,12 @@ class _HomePageState extends State<HomePage> {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 16,
+          bottom: 120,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children:
@@ -588,19 +594,11 @@ class _HomePageState extends State<HomePage> {
                             child: Center(
                               child: Column(
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(24),
-                                    decoration: BoxDecoration(
-                                      color: theme.dividerColor.withOpacity(
-                                        0.3,
-                                      ),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.receipt_long_outlined,
-                                      size: 64,
-                                      color: theme.dividerColor,
-                                    ),
+                                  Lottie.asset(
+                                    'assets/lottie/empty1.json',
+                                    height: 120,
+                                    repeat: true,
+                                    animate: true,
                                   ),
                                   const SizedBox(height: 24),
                                   Text(
@@ -1099,6 +1097,41 @@ class _HomePageState extends State<HomePage> {
     final Color chartPrimaryColor = isDarkMode
         ? AppColors.darkPrimaryButtonColor
         : AppColors.lightPrimaryButtonColor;
+
+    double maxReal = _realChartSpots.isEmpty
+        ? 0
+        : _realChartSpots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
+    double maxPredict = _predictChartSpots.isEmpty
+        ? 0
+        : _predictChartSpots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
+    double maxYValue = maxReal > maxPredict ? maxReal : maxPredict;
+    double calculatedMaxY = (maxYValue * 1.5).clamp(10.0, double.infinity);
+
+    final realBarData = LineChartBarData(
+      spots: _realChartSpots,
+      showingIndicators: List.generate(_realChartSpots.length, (i) => i),
+      isCurved: true,
+      color: chartPrimaryColor,
+      barWidth: 4,
+      isStrokeCapRound: true,
+      dotData: const FlDotData(show: false),
+      belowBarData: BarAreaData(
+        show: true,
+        color: chartPrimaryColor.withOpacity(0.15),
+      ),
+    );
+
+    final predictBarData = LineChartBarData(
+      spots: _predictChartSpots,
+      showingIndicators: List.generate(_predictChartSpots.length, (i) => i),
+      isCurved: true,
+      color: isDarkMode ? Colors.white70 : AppColors.lightPrimaryTextColor,
+      barWidth: 4,
+      isStrokeCapRound: true,
+      dotData: const FlDotData(show: false),
+      dashArray: [8, 4],
+    );
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1126,144 +1159,200 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "Analisis Double Exponential Smoothing (DES)",
+                      "Melihat tren saldo riil dan proyeksi masa depan berdasarkan kebiasaan Anda.",
                       style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
                     ),
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: chartPrimaryColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        "Riil",
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Colors.grey,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Text(
-                        "Prediksi",
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 150,
-            child: _realChartSpots.isEmpty
-                ? const Center(child: Text("Isi data untuk melihat grafik"))
-                : LineChart(
-                    LineChartData(
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        getDrawingHorizontalLine: (value) =>
-                            FlLine(color: theme.dividerColor, strokeWidth: 1),
-                      ),
-                      titlesData: FlTitlesData(
-                        leftTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            interval:
-                                1, // Menjamin label hanya dirender di bilangan bulat
-                            getTitlesWidget: (value, meta) {
-                              // Pastikan hanya memproses nilai bulat
-                              if (value != value.toInt()) {
-                                return const SizedBox.shrink();
-                              }
-
-                              final index = value.toInt();
-                              if (index < 0 || index >= _chartLabels.length) {
-                                return const SizedBox.shrink();
-                              }
-
-                              final style = theme.textTheme.bodyMedium
-                                  ?.copyWith(fontSize: 12);
-
-                              // Highlight current month if it's the last real data point
-                              bool isLastReal =
-                                  index == _realChartSpots.length - 1;
-
-                              return Text(
-                                _chartLabels[index],
-                                style: isLastReal
-                                    ? theme.textTheme.bodyLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      )
-                                    : style,
-                              );
-                            },
+              if (_uniqueMonthsCount >= 2)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: chartPrimaryColor,
+                            shape: BoxShape.circle,
                           ),
                         ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: _realChartSpots,
-                          isCurved: true,
-                          color: chartPrimaryColor,
-                          barWidth: 4,
-                          isStrokeCapRound: true,
-                          dotData: const FlDotData(show: false),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: chartPrimaryColor.withAlpha(50),
+                        const SizedBox(width: 4),
+                        Text(
+                          "Riil",
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ),
-                        LineChartBarData(
-                          spots: _predictChartSpots,
-                          isCurved: true,
-                          color: isDarkMode
-                              ? Colors.white
-                              : AppColors.lightPrimaryTextColor,
-                          barWidth: 4,
-                          isStrokeCapRound: true,
-                          dotData: const FlDotData(show: false),
-                          dashArray: [8, 4],
                         ),
                       ],
                     ),
-                  ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.grey,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          "Prediksi",
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+            ],
           ),
+          const SizedBox(height: 24),
+          if (_uniqueMonthsCount < 2)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              width: double.infinity,
+              child: Column(
+                children: [
+                  Lottie.asset(
+                    'assets/lottie/empty2.json',
+                    height: 100,
+                    repeat: true,
+                    animate: true,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Data Belum Cukup",
+                    style: TextStyle(
+                      color: theme.primaryColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Sistem butuh data transaksi minimal 3 bulan untuk meramal arus kas Anda secara akurat.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: theme.textTheme.bodyMedium?.color,
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            SizedBox(
+              height: 160,
+              child: LineChart(
+                LineChartData(
+                  minY: 0,
+                  maxY: calculatedMaxY,
+                  showingTooltipIndicators: [
+                    ..._realChartSpots.map(
+                      (spot) => ShowingTooltipIndicators([
+                        LineBarSpot(realBarData, 0, spot),
+                      ]),
+                    ),
+                    ..._predictChartSpots.map(
+                      (spot) => ShowingTooltipIndicators([
+                        LineBarSpot(predictBarData, 1, spot),
+                      ]),
+                    ),
+                  ],
+                  lineTouchData: LineTouchData(
+                    enabled: false,
+                    getTouchedSpotIndicator:
+                        (LineChartBarData barData, List<int> spotIndexes) {
+                          return spotIndexes.map((index) {
+                            return TouchedSpotIndicatorData(
+                              const FlLine(color: Colors.transparent),
+                              FlDotData(
+                                show: true,
+                                getDotPainter:
+                                    (spot, percent, barData, index) =>
+                                        FlDotCirclePainter(
+                                          radius: 4,
+                                          color: barData.color ?? Colors.blue,
+                                          strokeWidth: 2,
+                                          strokeColor: Colors.white,
+                                        ),
+                              ),
+                            );
+                          }).toList();
+                        },
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                        return touchedSpots.map((spot) {
+                          return LineTooltipItem(
+                            formatCompact(spot.y * 1000000),
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 9,
+                            ),
+                          );
+                        }).toList();
+                      },
+                    ),
+                  ),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (value) =>
+                        FlLine(color: theme.dividerColor, strokeWidth: 1),
+                  ),
+                  titlesData: FlTitlesData(
+                    leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          if (value != value.toInt()) {
+                            return const SizedBox.shrink();
+                          }
+                          final index = value.toInt();
+                          if (index < 0 || index >= _chartLabels.length) {
+                            return const SizedBox.shrink();
+                          }
+                          final style = theme.textTheme.bodyMedium?.copyWith(
+                            fontSize: 12,
+                          );
+                          bool isLastReal = index == _realChartSpots.length - 1;
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              _chartLabels[index],
+                              style: isLastReal
+                                  ? theme.textTheme.bodyLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    )
+                                  : style,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  lineBarsData: [realBarData, predictBarData],
+                ),
+              ),
+            ),
         ],
       ),
     );

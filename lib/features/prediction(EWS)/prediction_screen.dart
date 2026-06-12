@@ -105,7 +105,12 @@ class _AdvisorPageState extends State<AdvisorPage> {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 16,
+          bottom: 120,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -500,11 +505,7 @@ class _AdvisorPageState extends State<AdvisorPage> {
                             sideTitles: SideTitles(
                               showTitles: true,
                               getTitlesWidget: (value, meta) {
-                                const labels = [
-                                  'Bulan 1',
-                                  'Bulan 2',
-                                  'Bulan 3',
-                                ];
+                                final labels = data.last3MonthsLabels;
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 8.0),
                                   child: Text(
@@ -645,8 +646,11 @@ class _AdvisorPageState extends State<AdvisorPage> {
                             ),
                           ),
                           TextSpan(
-                            text:
-                                "Berdasarkan grafik tren, pengeluaran Anda cenderung naik ${formatCompact(data.trend)} tiap bulannya. Pertimbangkan untuk membatasi belanja tersier bulan depan.",
+                            text: data.trend > 0
+                                ? "Berdasarkan grafik tren, pengeluaran Anda cenderung naik ${formatCompact(data.trend)} tiap bulannya. Pertimbangkan untuk membatasi belanja tersier bulan depan."
+                                : (data.trend < 0
+                                      ? "Berdasarkan grafik tren, pengeluaran Anda berhasil ditekan turun ${formatCompact(data.trend.abs())} tiap bulannya. Pertahankan kebiasaan baik ini!"
+                                      : "Berdasarkan grafik tren, pengeluaran Anda cenderung stabil tiap bulannya. Terus pertahankan pengelolaan keuangan Anda!"),
                             style: const TextStyle(fontSize: 13, height: 1.4),
                           ),
                         ],
