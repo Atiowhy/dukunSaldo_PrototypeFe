@@ -76,18 +76,24 @@ class _HomePageState extends State<HomePage> {
     String prefix = isNegative ? "-" : "";
     if (absAmount >= 1000000000) {
       String val = (absAmount / 1000000000).toStringAsFixed(2);
-      if (val.endsWith('.00')) val = val.substring(0, val.length - 3);
-      else if (val.endsWith('0')) val = val.substring(0, val.length - 1);
+      if (val.endsWith('.00'))
+        val = val.substring(0, val.length - 3);
+      else if (val.endsWith('0'))
+        val = val.substring(0, val.length - 1);
       return '$prefix${val}M';
     } else if (absAmount >= 1000000) {
       String val = (absAmount / 1000000).toStringAsFixed(2);
-      if (val.endsWith('.00')) val = val.substring(0, val.length - 3);
-      else if (val.endsWith('0')) val = val.substring(0, val.length - 1);
+      if (val.endsWith('.00'))
+        val = val.substring(0, val.length - 3);
+      else if (val.endsWith('0'))
+        val = val.substring(0, val.length - 1);
       return '$prefix${val}Jt';
     } else if (absAmount >= 1000) {
       String val = (absAmount / 1000).toStringAsFixed(2);
-      if (val.endsWith('.00')) val = val.substring(0, val.length - 3);
-      else if (val.endsWith('0')) val = val.substring(0, val.length - 1);
+      if (val.endsWith('.00'))
+        val = val.substring(0, val.length - 3);
+      else if (val.endsWith('0'))
+        val = val.substring(0, val.length - 1);
       return '$prefix${val}Rb';
     }
     return '$prefix${absAmount.toStringAsFixed(0)}';
@@ -454,7 +460,7 @@ class _HomePageState extends State<HomePage> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(100),
                   child: Image.asset(
-                    "assets/image/ciks.jpeg",
+                    "assets/image/orang.jpg",
                     width: 60,
                     height: 60,
                     fit: BoxFit.cover,
@@ -1117,7 +1123,7 @@ class _HomePageState extends State<HomePage> {
         ? 0
         : _predictChartSpots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
     double maxYValue = maxReal > maxPredict ? maxReal : maxPredict;
-    
+
     double minReal = _realChartSpots.isEmpty
         ? 0
         : _realChartSpots.map((e) => e.y).reduce((a, b) => a < b ? a : b);
@@ -1126,7 +1132,10 @@ class _HomePageState extends State<HomePage> {
         : _predictChartSpots.map((e) => e.y).reduce((a, b) => a < b ? a : b);
     double minYValue = minReal < minPredict ? minReal : minPredict;
 
-    double calculatedMaxY = (maxYValue > 0 ? maxYValue * 1.5 : 0.0).clamp(10.0, double.infinity);
+    double calculatedMaxY = (maxYValue > 0 ? maxYValue * 1.5 : 0.0).clamp(
+      10.0,
+      double.infinity,
+    );
     double calculatedMinY = minYValue < 0 ? (minYValue * 1.5) : 0.0;
 
     final realBarData = LineChartBarData(
@@ -1267,7 +1276,7 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             )
-          else
+          else ...[
             SizedBox(
               height: 160,
               child: LineChart(
@@ -1375,6 +1384,33 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.primaryColor.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: theme.primaryColor.withOpacity(0.2)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, color: theme.primaryColor, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Info: Garis putus-putus adalah prediksi masa depan. AI menggunakan sistem peredam (smoothing) otomatis agar ramalan saldo tidak langsung rusak/anjlok drastis hanya karena pengeluaran kaget sesaat di bulan ini.",
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 11,
+                        height: 1.4,
+                        color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

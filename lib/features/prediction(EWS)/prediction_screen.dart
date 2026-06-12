@@ -121,6 +121,14 @@ class _AdvisorPageState extends State<AdvisorPage> {
 
     final data = _advisorData!;
 
+    double lastMonthActual = 0;
+    double currentMonthActual = 0;
+    if (data.last3MonthsActual.length >= 2) {
+      lastMonthActual = data.last3MonthsActual[1];
+      currentMonthActual = data.last3MonthsActual[2];
+    }
+    double realDifference = currentMonthActual - lastMonthActual;
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Padding(
@@ -666,16 +674,12 @@ class _AdvisorPageState extends State<AdvisorPage> {
                           ),
                           TextSpan(
                             text: data.isDeficit
-                                ? "Peringatan! Walaupun tren pengeluaran Anda ${data.trend > 0
-                                      ? 'naik'
-                                      : data.trend < 0
-                                      ? 'menurun'
-                                      : 'stabil'}, prediksi pengeluaran bulan depan melampaui sisa saldo. Segera kurangi pengeluaran agar terhindar dari defisit berlanjut!"
-                                : (data.trend > 0
-                                      ? "Berdasarkan grafik tren, pengeluaran Anda cenderung naik ${formatCompact(data.trend)} tiap bulannya. Pertimbangkan untuk membatasi belanja tersier bulan depan."
-                                      : (data.trend < 0
-                                            ? "Berdasarkan grafik tren, pengeluaran Anda berhasil ditekan turun ${formatCompact(data.trend.abs())} tiap bulannya. Pertahankan kebiasaan baik ini!"
-                                            : "Berdasarkan grafik tren, pengeluaran Anda cenderung stabil tiap bulannya. Terus pertahankan pengelolaan keuangan Anda!")),
+                                ? "Peringatan! Pengeluaran Anda bulan ini ${realDifference > 0 ? 'naik sebesar ${formatCompact(realDifference.abs())}' : realDifference < 0 ? 'turun sebesar ${formatCompact(realDifference.abs())}' : 'cenderung stabil'}, NAMUN prediksi bulan depan (${formatCompact(data.nextMonthForecast)}) berpotensi melampaui sisa saldo Anda saat ini. Segera kurangi pengeluaran agar terhindar dari defisit!"
+                                : (realDifference > 0
+                                      ? "Pengeluaran Anda bulan ini nyata naik sebesar ${formatCompact(realDifference.abs())} dari bulan lalu. Jika dibiarkan, AI memprediksi pengeluaran bulan depan bisa mencapai ${formatCompact(data.nextMonthForecast)}. Pertimbangkan untuk membatasi belanja tersier."
+                                      : (realDifference < 0
+                                            ? "Bagus! Pengeluaran Anda bulan ini berhasil ditekan turun sebesar ${formatCompact(realDifference.abs())}. AI memprediksi Anda bisa menekan pengeluaran bulan depan hingga ${formatCompact(data.nextMonthForecast)}. Pertahankan kebiasaan baik ini!"
+                                            : "Pengeluaran Anda bulan ini sangat stabil. AI memprediksi pengeluaran bulan depan akan berada di kisaran ${formatCompact(data.nextMonthForecast)}. Terus pertahankan pengelolaan keuangan Anda!")),
                             style: const TextStyle(fontSize: 13, height: 1.4),
                           ),
                         ],
