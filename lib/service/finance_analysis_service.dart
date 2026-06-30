@@ -341,7 +341,16 @@ class FinanceAnalysisService {
           ((nextMonthForecast - lastMonthActual) / lastMonthActual) * 100;
     }
 
+    // ==========================================
+    // LOGIKA EARLY WARNING SYSTEM (EWS)
+    // ==========================================
+
+    // 1 & 2. Bandingkan Prediksi pengeluaran bulan depan (`nextMonthForecast`) dengan Sisa uang di dompet (`currentTotalBalance`).
+    // JIKA Prediksi > Sisa Saldo, maka diprediksi akan kehabisan uang (isDeficit = true).
     bool isDeficit = nextMonthForecast > currentTotalBalance;
+
+    // 3. JIKA defisit, hitung selisih uang kekurangannya (`deficitAmount`).
+    // Jika aman, set kekurangan = 0.
     double deficitAmount = isDeficit
         ? (nextMonthForecast - currentTotalBalance)
         : 0;
