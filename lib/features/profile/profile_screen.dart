@@ -111,7 +111,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    final newTargetRaw = _targetController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final newTargetRaw = _targetController.text.replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
     final newTarget = double.tryParse(newTargetRaw) ?? Preference.savingsTarget;
 
     setState(() {
