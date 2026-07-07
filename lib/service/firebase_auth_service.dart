@@ -118,4 +118,37 @@ class FirebaseAuthService {
     }
     return null;
   }
+
+  // Update username and photoUrl in Firebase
+  Future<bool> updateUserProfile({String? newName, String? newPhotoUrl}) async {
+    try {
+      User? currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        // Update Auth Profile
+        if (newName != null) {
+          await currentUser.updateDisplayName(newName);
+        }
+        if (newPhotoUrl != null && newPhotoUrl.startsWith('http')) {
+          await currentUser.updatePhotoURL(newPhotoUrl);
+        }
+
+        // Update Firestore Document
+        Map<String, dynamic> updates = {};
+        if (newName != null) updates['name'] = newName; // Use 'name' to match UserModelFirebase
+        if (newPhotoUrl != null) updates['photoUrl'] = newPhotoUrl;
+        
+        if (updates.isNotEmpty) {
+          await _firestore
+              .collection('users')
+              .doc(currentUser.uid)
+              .update(updates);
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      log("Error update profile: ${e.toString()}");
+      throw Exception("Gagal mengupdate ke server database: ${e.toString()}");
+    }
+  }
 }

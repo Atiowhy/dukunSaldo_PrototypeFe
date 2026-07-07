@@ -1,9 +1,11 @@
 import 'package:dukunsaldo_fe/core/constants/app_assets.dart';
 import 'package:dukunsaldo_fe/database/db_helper.dart';
+import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 // import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/features/auth/register.dart';
 import 'package:dukunsaldo_fe/features/home/home_screen.dart';
+import 'package:dukunsaldo_fe/service/firebase_auth_service.dart';
 // import 'package:dukunsaldo_fe/features/home/home_screen.dart';
 import 'package:dukunsaldo_fe/models/model_users.dart';
 import 'package:dukunsaldo_fe/models/log_model.dart';
@@ -37,27 +39,47 @@ class _LoginState extends State<Login> {
       return;
     }
 
-    final pengguna = await DatabaseHelper.instance.loginUser(
-      UserModelSql(email: email, password: pass, username: ''),
-    );
+    setState(() {
+      _isLoading = true;
+    });
+
+    final authService = FirebaseAuthService();
+    final pengguna = await authService.signIn(email, pass);
+
+    if (pengguna != null) {
+      // Sync user to local database so foreign keys work!
+      await DatabaseHelper.instance.registerUser(UserModelSql(
+        id: pengguna.id,
+        username: pengguna.username,
+        email: pengguna.email,
+        password: pengguna.password,
+      ));
+    }
 
     // Cek apakah widget masih terpasang (mounted) sebelum menggunakan context
     if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
 
     if (pengguna != null) {
       await Preference.saveUserSession(
         pengguna.id!,
         pengguna.username,
         pengguna.email,
+        pengguna.photoUrl,
       );
 
-      await DatabaseHelper.instance.insertLog(LogModel(
+      final logData = LogModel(
         userId: pengguna.id!,
         title: "Login Berhasil",
         message: "Selamat datang kembali, ${pengguna.username}!",
         date: DateTime.now().toIso8601String(),
         type: 'system',
-      ));
+      );
+      await DatabaseHelper.instance.insertLog(logData);
+      await FirebaseDbHelper.instance.insertLog(logData);
 
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(

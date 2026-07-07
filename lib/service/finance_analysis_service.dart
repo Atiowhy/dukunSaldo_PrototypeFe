@@ -437,10 +437,10 @@ class FinanceAnalysisService {
             actualSubTotal += trx.amount;
           }
         }
-        if (trx.category == 'Food') currentFood += trx.amount;
-        if (trx.category == 'Digital') currentDigital += trx.amount;
+        if (trx.category == 'Food' || trx.category == 'Makanan') currentFood += trx.amount;
+        if (trx.category == 'Digital' || trx.category == 'Tagihan') currentDigital += trx.amount;
       } else if (date.month == lastMonth && date.year == lastMonthYear) {
-        if (trx.category == 'Food') lastFood += trx.amount;
+        if (trx.category == 'Food' || trx.category == 'Makanan') lastFood += trx.amount;
       }
     }
 

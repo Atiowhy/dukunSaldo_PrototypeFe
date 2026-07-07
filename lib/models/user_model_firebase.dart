@@ -7,6 +7,7 @@ class UserModelFirebase {
   final String email;
   final String username;
   final String password;
+  final String? photoUrl;
   
   UserModelFirebase({
     this.id,
@@ -14,6 +15,7 @@ class UserModelFirebase {
     required this.email,
     required this.username,
     this.password = '',
+    this.photoUrl,
   });
 
   Map<String, dynamic> toMap() {
@@ -22,6 +24,7 @@ class UserModelFirebase {
       'uid': uid,
       'name': username,
       'email': email,
+      'photoUrl': photoUrl,
       // Password tidak disimpan ke database untuk keamanan
     };
   }
@@ -32,6 +35,7 @@ class UserModelFirebase {
       uid: map['uid'] as String?,
       email: map['email'] as String,
       username: map['name'],
+      photoUrl: map['photoUrl'] as String?,
       // Password tidak ada di db, jadi kita beri default
       password: '', 
     );

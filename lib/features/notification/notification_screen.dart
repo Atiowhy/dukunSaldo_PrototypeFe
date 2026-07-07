@@ -1,4 +1,5 @@
 import 'package:dukunsaldo_fe/database/db_helper.dart';
+import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/models/log_model.dart';
 import 'package:flutter/material.dart';
@@ -22,7 +23,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _fetchLogs() async {
-    final logs = await DatabaseHelper.instance.getLogsByUserId(Preference.userId);
+    final logs = await FirebaseDbHelper.instance.getLogsByUserId(Preference.userId);
+    logs.sort((a, b) => (b.id ?? 0).compareTo(a.id ?? 0));
     setState(() {
       _logs = logs;
       _isLoading = false;

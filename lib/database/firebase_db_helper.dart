@@ -1,7 +1,8 @@
 import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:dukunsaldo_fe/models/transactions_model.dart';
 import 'package:dukunsaldo_fe/models/log_model.dart';
+import 'package:dukunsaldo_fe/models/transactions_model.dart';
 
 class FirebaseDbHelper {
   static final FirebaseDbHelper instance = FirebaseDbHelper._init();
@@ -15,11 +16,14 @@ class FirebaseDbHelper {
     try {
       // Membuat ID integer unik berbasis waktu jika belum ada (karena model butuh int id)
       int uniqueId = transaction.id ?? DateTime.now().millisecondsSinceEpoch;
-      
-      Map<String, dynamic> data = transaction.toMap();
-      data['id'] = uniqueId; 
 
-      await _firestore.collection('transactions').doc(uniqueId.toString()).set(data);
+      Map<String, dynamic> data = transaction.toMap();
+      data['id'] = uniqueId;
+
+      await _firestore
+          .collection('transactions')
+          .doc(uniqueId.toString())
+          .set(data);
       return true;
     } catch (e) {
       log("Error insert transaction: ${e.toString()}");
@@ -31,7 +35,6 @@ class FirebaseDbHelper {
     try {
       final querySnapshot = await _firestore
           .collection('transactions')
-          .orderBy('id', descending: true)
           .get();
 
       return querySnapshot.docs
@@ -49,7 +52,6 @@ class FirebaseDbHelper {
       final querySnapshot = await _firestore
           .collection('transactions')
           .where('userId', isEqualTo: userId)
-          .orderBy('id', descending: true)
           .get();
 
       return querySnapshot.docs
@@ -90,7 +92,7 @@ class FirebaseDbHelper {
   Future<bool> insertLog(LogModel logData) async {
     try {
       int uniqueId = logData.id ?? DateTime.now().millisecondsSinceEpoch;
-      
+
       Map<String, dynamic> data = logData.toMap();
       data['id'] = uniqueId;
 
@@ -107,7 +109,6 @@ class FirebaseDbHelper {
       final querySnapshot = await _firestore
           .collection('logs')
           .where('userId', isEqualTo: userId)
-          .orderBy('id', descending: true)
           .get();
 
       return querySnapshot.docs

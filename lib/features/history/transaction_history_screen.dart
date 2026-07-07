@@ -1,5 +1,7 @@
+import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
+import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:flutter/material.dart';
-import '../../../database/db_helper.dart';
+
 import '../../../models/transactions_model.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
@@ -14,30 +16,54 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   String _selectedCategory = "Semua";
 
   List<TransactionModel> _allTransactions = [];
+  List<TransactionModel> _filteredTransactions = [];
   bool _isLoading = true;
 
   final List<String> _kategoryList = [
     "Semua",
     "Pengeluaran",
     "Pemasukkan",
-    "Food",
-    "Transport",
-    "Digital",
-    "Shopping",
+    "Makanan",
+    "Transportasi",
+    "Belanja",
+    "Tagihan",
   ];
 
   @override
   void initState() {
     super.initState();
-    _loadHistoryData();
+    _fetchTransactions();
   }
 
-  Future<void> _loadHistoryData() async {
+  Future<void> _fetchTransactions() async {
     setState(() => _isLoading = true);
-    final data = await DatabaseHelper.instance.getAllTransactions();
+    final data = await FirebaseDbHelper.instance.getTransactionsByUserId(
+      Preference.userId,
+    );
+    data.sort((a, b) => (b.id ?? 0).compareTo(a.id ?? 0));
+
+    if (!mounted) return;
     setState(() {
       _allTransactions = data;
       _isLoading = false;
+      _applyFilters();
+    });
+  }
+
+  void _applyFilters() {
+    setState(() {
+      _filteredTransactions = _allTransactions.where((trx) {
+        if (_selectedCategory == "Semua") return true;
+
+        if (_selectedCategory == "Pemasukkan") {
+          return trx.type == "income";
+        }
+        if (_selectedCategory == "Pengeluaran") {
+          return trx.type == "expense";
+        }
+
+        return trx.category.toLowerCase() == _selectedCategory.toLowerCase();
+      }).toList();
     });
   }
 
@@ -52,19 +78,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
-
-    final filteredTransactions = _allTransactions.where((trx) {
-      if (_selectedCategory == "Semua") return true;
-
-      if (_selectedCategory == "Pemasukkan") {
-        return trx.type == "income";
-      }
-      if (_selectedCategory == "Pengeluaran") {
-        return trx.type == "expense";
-      }
-
-      return trx.category.toLowerCase() == _selectedCategory.toLowerCase();
-    }).toList();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -103,6 +116,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                             onTap: () {
                               setState(() {
                                 _selectedCategory = kategori;
+                                _applyFilters();
                               });
                             },
                             child: AnimatedContainer(
@@ -148,7 +162,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 const SizedBox(height: 8),
 
                 Expanded(
-                  child: filteredTransactions.isEmpty
+                  child: _filteredTransactions.isEmpty
                       ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -188,9 +202,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                             vertical: 16,
                           ),
                           physics: const BouncingScrollPhysics(),
-                          itemCount: filteredTransactions.length,
+                          itemCount: _filteredTransactions.length,
                           itemBuilder: (context, index) {
-                            final trx = filteredTransactions[index];
+                            final trx = _filteredTransactions[index];
 
                             final bool isIncome = trx.type == "income";
 
