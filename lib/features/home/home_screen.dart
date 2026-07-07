@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:dukunsaldo_fe/core/providers/theme_provider.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
@@ -17,6 +18,7 @@ import 'package:provider/provider.dart';
 import 'package:sqlite_viewer2/sqlite_viewer.dart';
 
 import '../../database/db_helper.dart';
+import '../../database/firebase_db_helper.dart';
 import '../history/transaction_history_screen.dart';
 import '../prediction(EWS)/prediction_screen.dart';
 import '../recomendation/recomendation_screen.dart';
@@ -101,18 +103,15 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _fetchTransactions() async {
     int activeUserId = Preference.userId;
-    final db = await DatabaseHelper.instance.database;
+    
+    // Fetch directly from Firebase
+    List<TransactionModel> transactionModels = await FirebaseDbHelper.instance.getTransactionsByUserId(activeUserId);
 
-    final List<Map<String, dynamic>> maps = await db.query(
-      'transactions',
-      where: 'userId = ?',
-      whereArgs: [activeUserId],
-      orderBy: 'id DESC',
-    );
+    // Urutkan dari yang terbaru (id DESC)
+    transactionModels.sort((a, b) => (b.id ?? 0).compareTo(a.id ?? 0));
 
-    List<TransactionModel> transactionModels = maps
-        .map((e) => TransactionModel.fromMap(e))
-        .toList();
+    // Bikin format list map untuk UI compatibility (karena sebelumnya pakai db.query yg nge-return List<Map>)
+    List<Map<String, dynamic>> maps = transactionModels.map((t) => t.toMap()).toList();
 
     // 👇 LOGIKA BARU: Hitung ada berapa bulan unik di dalam database
     Set<String> uniqueMonths = {};
@@ -183,18 +182,16 @@ class _HomePageState extends State<HomePage> {
 
     if (confirm) {
       await DatabaseHelper.instance.deleteTransaction(id);
+      await FirebaseDbHelper.instance.deleteTransaction(id);
       _fetchTransactions();
     }
   }
 
   Future<void> _fetchNotifications() async {
     int activeUserId = Preference.userId;
-    final db = await DatabaseHelper.instance.database;
-    final List<Map<String, dynamic>> logs = await db.query(
-      'logs',
-      where: 'userId = ?',
-      whereArgs: [activeUserId],
-    );
+    // Fetch logs from Firebase
+    final logs = await FirebaseDbHelper.instance.getLogsByUserId(activeUserId);
+    
     if (mounted) {
       setState(() {
         _notificationCount = logs.length;
@@ -451,40 +448,49 @@ class _HomePageState extends State<HomePage> {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          DrawerHeader(
-            decoration: BoxDecoration(color: theme.cardColor),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(100),
-                  child: Image.asset(
-                    "assets/image/orang.jpg",
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Icon(
-                      Icons.account_circle,
-                      size: 60,
-                      color: theme.primaryColor,
-                    ),
-                  ),
+          UserAccountsDrawerHeader(
+            decoration: BoxDecoration(
+              color: theme.primaryColor.withOpacity(0.2),
+              image: DecorationImage(
+                fit: BoxFit.cover,
+                colorFilter: ColorFilter.mode(
+                  Colors.black.withOpacity(0.4),
+                  BlendMode.darken,
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  userName,
-                  style: TextStyle(
-                    color: theme.primaryColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  userEmail,
-                  style: TextStyle(color: theme.primaryColor, fontSize: 14),
-                ),
-              ],
+                image: Preference.photoUrl.isNotEmpty
+                    ? (Preference.photoUrl.startsWith('http')
+                        ? NetworkImage(Preference.photoUrl)
+                        : MemoryImage(base64Decode(Preference.photoUrl))
+                            as ImageProvider)
+                    : const AssetImage("assets/images/orang.jpg"),
+              ),
+            ),
+            currentAccountPicture: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: CircleAvatar(
+                backgroundColor: theme.scaffoldBackgroundColor.withOpacity(0.5),
+                backgroundImage: Preference.photoUrl.isNotEmpty
+                    ? (Preference.photoUrl.startsWith('http')
+                        ? NetworkImage(Preference.photoUrl)
+                        : MemoryImage(base64Decode(Preference.photoUrl))
+                            as ImageProvider)
+                    : const AssetImage("assets/images/orang.jpg"),
+              ),
+            ),
+            accountName: Text(
+              userName,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            accountEmail: Text(
+              userEmail,
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
           ),
           ListTile(

@@ -11,20 +11,26 @@ class Preference {
   static int get userId => _prefs?.getInt('userId') ?? 0;
   static String get username => _prefs?.getString('username') ?? 'Guest';
   static String get email => _prefs?.getString('email') ?? '';
+  static String get photoUrl => _prefs?.getString('photoUrl') ?? '';
 
   static bool get hasSeenOnboarding => _prefs?.getBool('hasSeenOnboarding') ?? false;
   static bool get isBalanceHidden => _prefs?.getBool('isBalanceHidden') ?? false;
   static double get savingsTarget => _prefs?.getDouble('savingsTarget') ?? 5000000.0;
 
-  static Future<void> saveUserSession(int id, String name, String email) async {
+  static Future<void> saveUserSession(int id, String name, String email, [String? photoUrl]) async {
     await _prefs?.setBool('isLogin', true);
     await _prefs?.setInt('userId', id);
     await _prefs?.setString('username', name);
     await _prefs?.setString('email', email);
+    if (photoUrl != null) await _prefs?.setString('photoUrl', photoUrl);
   }
 
   static Future<void> setUsername(String name) async {
     await _prefs?.setString('username', name);
+  }
+
+  static Future<void> setPhotoUrl(String url) async {
+    await _prefs?.setString('photoUrl', url);
   }
 
   static Future<void> setHasSeenOnboarding(bool value) async {

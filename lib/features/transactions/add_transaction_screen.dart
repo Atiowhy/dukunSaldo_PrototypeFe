@@ -1,5 +1,6 @@
 import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:dukunsaldo_fe/database/db_helper.dart';
+import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/models/transactions_model.dart';
 import 'package:dukunsaldo_fe/models/log_model.dart';
@@ -19,24 +20,31 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final TextEditingController _notesController = TextEditingController();
 
   String _selectedType = "expense";
-  String _selectedCategory = "Food";
+  String _selectedCategory = "Makanan";
   DateTime _selectedDate = DateTime.now();
   bool _isSubscription = false;
   bool _isLoading = false;
 
-  final List<Map<String, dynamic>> _categories = [
-    {"name": "Food", "icon": Icons.restaurant},
-    {"name": "Transport", "icon": Icons.directions_car},
-    {"name": "Digital", "icon": Icons.devices},
-    {"name": "Shopping", "icon": Icons.shopping_bag},
-    {"name": "Gaji", "icon": Icons.payments}, // Ubah icon agar lebih relevan
-    {"name": "Cicilan", "icon": Icons.wallet}, // Ubah icon agar lebih relevan
-    {
-      "name": "Pendidikan",
-      "icon": Icons.school,
-    }, // Ubah icon agar lebih relevan
-    {"name": "Lain lain", "icon": Icons.list}, // Ubah icon agar lebih relevan
+  final List<Map<String, dynamic>> _expenseCategories = [
+    {"name": "Makanan", "icon": Icons.restaurant},
+    {"name": "Transportasi", "icon": Icons.directions_car},
+    {"name": "Belanja", "icon": Icons.shopping_bag},
+    {"name": "Tagihan", "icon": Icons.receipt_long},
+    {"name": "Pendidikan", "icon": Icons.school},
+    {"name": "Hiburan", "icon": Icons.movie},
+    {"name": "Kesehatan", "icon": Icons.medical_services},
+    {"name": "Lain-lain", "icon": Icons.list},
   ];
+
+  final List<Map<String, dynamic>> _incomeCategories = [
+    {"name": "Gaji", "icon": Icons.payments},
+    {"name": "Bonus", "icon": Icons.card_giftcard},
+    {"name": "Investasi", "icon": Icons.trending_up},
+    {"name": "Penjualan", "icon": Icons.store},
+    {"name": "Lain-lain", "icon": Icons.list},
+  ];
+
+  List<Map<String, dynamic>> get _categories => _selectedType == 'expense' ? _expenseCategories : _incomeCategories;
 
   @override
   void initState() {
@@ -106,8 +114,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _isLoading = true;
     });
 
+    int generatedId = widget.transaction?.id ?? DateTime.now().millisecondsSinceEpoch;
+
     final transaksiBaru = TransactionModel(
-      id: widget.transaction?.id,
+      id: generatedId,
       userId: Preference.userId,
       merchantName: notes.isEmpty ? "Transaksi $_selectedCategory" : notes,
       category: _selectedCategory,
@@ -120,12 +130,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     bool success = false;
 
     if (widget.transaction == null) {
-      success = await DatabaseHelper.instance.insertTransaction(transaksiBaru);
+      // Save locally
+      await DatabaseHelper.instance.insertTransaction(transaksiBaru);
+      // Save to Firebase
+      success = await FirebaseDbHelper.instance.insertTransaction(transaksiBaru);
     } else {
-      int result = await DatabaseHelper.instance.updateTransaction(
-        transaksiBaru,
-      );
-      success = result > 0;
+      // Update locally
+      await DatabaseHelper.instance.updateTransaction(transaksiBaru);
+      // Update to Firebase
+      success = await FirebaseDbHelper.instance.updateTransaction(transaksiBaru);
     }
 
     if (!mounted) return;
@@ -134,13 +147,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     });
 
     if (success) {
-      await DatabaseHelper.instance.insertLog(LogModel(
+      final logData = LogModel(
         userId: Preference.userId,
         title: widget.transaction == null ? "Transaksi Baru" : "Update Transaksi",
         message: "Anda mencatat ${_selectedType == 'income' ? 'pemasukan' : 'pengeluaran'} sebesar Rp $amount untuk kategori $_selectedCategory.",
         date: DateTime.now().toIso8601String(),
         type: _selectedType,
-      ));
+      );
+      
+      // Save log locally
+      await DatabaseHelper.instance.insertLog(logData);
+      // Save log to Firebase
+      await FirebaseDbHelper.instance.insertLog(logData);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -224,7 +242,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 children: [
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => setState(() => _selectedType = "expense"),
+                      onTap: () {
+                        setState(() {
+                          _selectedType = "expense";
+                          _selectedCategory = _expenseCategories.first["name"];
+                        });
+                      },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -258,7 +281,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => setState(() => _selectedType = "income"),
+                      onTap: () {
+                        setState(() {
+                          _selectedType = "income";
+                          _selectedCategory = _incomeCategories.first["name"];
+                        });
+                      },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(vertical: 12),

@@ -1,5 +1,6 @@
 import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:dukunsaldo_fe/database/db_helper.dart';
+import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/models/transactions_model.dart';
 import 'package:dukunsaldo_fe/service/finance_analysis_service.dart'; // 👈 Import Service-nya
@@ -46,16 +47,10 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Future<void> _fetchReportData() async {
     int activeUserId = Preference.userId;
-    final db = await DatabaseHelper.instance.database;
+    List<TransactionModel> allTransactions = await FirebaseDbHelper.instance.getTransactionsByUserId(activeUserId);
 
-    final List<Map<String, dynamic>> maps = await db.query(
-      'transactions',
-      where: 'userId = ? AND type = ?',
-      whereArgs: [activeUserId, 'expense'],
-    );
-
-    List<TransactionModel> expenses = maps
-        .map((e) => TransactionModel.fromMap(e))
+    List<TransactionModel> expenses = allTransactions
+        .where((trx) => trx.type == 'expense')
         .toList();
 
     // 👇 Panggil "Dapur" Service secara rapi
