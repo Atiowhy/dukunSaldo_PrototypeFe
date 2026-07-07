@@ -26,7 +26,7 @@ class DatabaseHelper {
       path, 
       version: 3, 
       onConfigure: (db) async {
-        await db.execute('PRAGMA foreign_keys = ON');
+        await db.execute('PRAGMA foreign_keys = OFF');
       },
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
@@ -103,11 +103,11 @@ class DatabaseHelper {
     return result.isNotEmpty;
   }
 
-  // fungsi buat register
+  // fungsi buat register / sync user
   Future<bool> registerUser(UserModelSql user) async {
     final db = await instance.database;
     try {
-      await db.insert("users", user.toMap());
+      await db.insert("users", user.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
       return true;
     } catch (e) {
       log(e.toString());

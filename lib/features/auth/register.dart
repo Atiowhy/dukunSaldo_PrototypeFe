@@ -1,13 +1,14 @@
 import 'package:dukunsaldo_fe/core/constants/app_assets.dart';
-import 'package:dukunsaldo_fe/database/db_helper.dart';
 // import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/features/auth/login.dart';
 // import 'package:dukunsaldo_fe/features/home/home_screen.dart';
-import 'package:dukunsaldo_fe/models/model_users.dart';
+import 'package:dukunsaldo_fe/models/user_model_firebase.dart';
+import 'package:dukunsaldo_fe/service/firebase_auth_service.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import '../../core/widgets/custom_text_field.dart';
+
 import '../../core/widgets/custom_button.dart';
+import '../../core/widgets/custom_text_field.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -38,32 +39,51 @@ class _RegisterState extends State<Register> {
       return;
     }
 
-    final user = UserModelSql(
+    setState(() {
+      _isLoading = true;
+    });
+
+    final authService = FirebaseAuthService();
+
+    bool emailExists = await authService.checkEmailExist(email);
+    if (emailExists) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Email sudah terdaftar!')));
+      return;
+    }
+
+    final user = UserModelFirebase(
       username: username,
       email: email,
       password: password,
     );
-    bool success = await DatabaseHelper.instance.registerUser(user);
+
+    final registeredUser = await authService.signUp(user);
 
     if (!mounted) return;
 
-    if (success) {
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (registeredUser != null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Akun berhasil dibuat')));
-      // Panggil ini setelah proses insert selesai
-      await DatabaseHelper.instance.checkUsersData();
-      if (!mounted) return;
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => Login()),
       );
-
-      // Tambahkan navigasi ke halaman login jika perlu
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Email sudah terdaftar!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal membuat akun, silakan coba lagi.')),
+      );
     }
   }
 

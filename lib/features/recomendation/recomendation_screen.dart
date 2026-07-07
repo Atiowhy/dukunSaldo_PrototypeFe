@@ -1,4 +1,5 @@
 import 'package:dukunsaldo_fe/database/db_helper.dart';
+import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/models/transactions_model.dart';
 import 'package:dukunsaldo_fe/service/finance_analysis_service.dart';
@@ -35,17 +36,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
 
   Future<void> _fetchAndAnalyzeData() async {
     int activeUserId = Preference.userId;
-    final db = await DatabaseHelper.instance.database;
-
-    final List<Map<String, dynamic>> maps = await db.query(
-      'transactions',
-      where: 'userId = ?',
-      whereArgs: [activeUserId],
-    );
-
-    List<TransactionModel> transactions = maps
-        .map((e) => TransactionModel.fromMap(e))
-        .toList();
+    List<TransactionModel> transactions = await FirebaseDbHelper.instance.getTransactionsByUserId(activeUserId);
 
     // Jalankan kalkulator rekomendasi
     final data = FinanceAnalysisService.generateRecommendations(transactions);
