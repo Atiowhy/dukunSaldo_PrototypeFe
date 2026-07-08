@@ -5,14 +5,18 @@ import 'package:dukunsaldo_fe/database/preference.dart';
 // import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/features/auth/register.dart';
 import 'package:dukunsaldo_fe/features/home/home_screen.dart';
-import 'package:dukunsaldo_fe/service/firebase_auth_service.dart';
+import 'package:dukunsaldo_fe/models/log_model.dart';
 // import 'package:dukunsaldo_fe/features/home/home_screen.dart';
 import 'package:dukunsaldo_fe/models/model_users.dart';
-import 'package:dukunsaldo_fe/models/log_model.dart';
+import 'package:dukunsaldo_fe/service/firebase_auth_service.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import '../../core/widgets/custom_text_field.dart';
+
 import '../../core/widgets/custom_button.dart';
+import '../../core/widgets/custom_text_field.dart';
+
+//lupa kata sandi di kecilin lalu letakkan dibawah kolom password
+//term and conditions
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -48,12 +52,14 @@ class _LoginState extends State<Login> {
 
     if (pengguna != null) {
       // Sync user to local database so foreign keys work!
-      await DatabaseHelper.instance.registerUser(UserModelSql(
-        id: pengguna.id,
-        username: pengguna.username,
-        email: pengguna.email,
-        password: pengguna.password,
-      ));
+      await DatabaseHelper.instance.registerUser(
+        UserModelSql(
+          id: pengguna.id,
+          username: pengguna.username,
+          email: pengguna.email,
+          password: pengguna.password,
+        ),
+      );
     }
 
     // Cek apakah widget masih terpasang (mounted) sebelum menggunakan context

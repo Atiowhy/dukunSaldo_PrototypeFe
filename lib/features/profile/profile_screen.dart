@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:dukunsaldo_fe/database/db_helper.dart';
-import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/features/auth/login.dart';
 import 'package:dukunsaldo_fe/models/model_users.dart';
@@ -19,17 +18,10 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _targetController = TextEditingController();
   bool _isLoading = false;
   String _currentName = '';
   String _currentPhotoUrl = '';
   final ImagePicker _picker = ImagePicker();
-
-  double _currentSaved = 0;
-  double _savingsTarget = 5000000;
-  double _thisMonthSavings = 0;
-  double _progressPercent = 0;
-  bool _isLoadingData = true;
 
   @override
   void initState() {
@@ -37,58 +29,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _currentName = Preference.username;
     _currentPhotoUrl = Preference.photoUrl;
     _nameController.text = _currentName;
-    _loadSavingsData();
-  }
-
-  Future<void> _loadSavingsData() async {
-    try {
-      final transactions = await FirebaseDbHelper.instance
-          .getTransactionsByUserId(Preference.userId);
-      double totalIncome = 0;
-      double totalExpense = 0;
-      double thisMonthIncome = 0;
-      double thisMonthExpense = 0;
-
-      final now = DateTime.now();
-
-      for (var t in transactions) {
-        final amount = t.amount;
-        final isIncome = t.type == 'income';
-        final date = DateTime.tryParse(t.date) ?? now;
-
-        if (isIncome)
-          totalIncome += amount;
-        else
-          totalExpense += amount;
-
-        if (date.year == now.year && date.month == now.month) {
-          if (isIncome)
-            thisMonthIncome += amount;
-          else
-            thisMonthExpense += amount;
-        }
-      }
-
-      final currentSaved = totalIncome - totalExpense;
-      // Target diambil dinamis dari pengaturan pengguna (default 5.000.000)
-      double target = Preference.savingsTarget;
-
-      double progress = currentSaved / target;
-      if (progress < 0) progress = 0;
-      if (progress > 1) progress = 1;
-
-      if (mounted) {
-        setState(() {
-          _currentSaved = currentSaved;
-          _savingsTarget = target;
-          _thisMonthSavings = thisMonthIncome - thisMonthExpense;
-          _progressPercent = progress;
-          _isLoadingData = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _isLoadingData = false);
-    }
   }
 
   String _formatRp(double value) {
@@ -106,7 +46,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _targetController.dispose();
     super.dispose();
   }
 
@@ -119,15 +58,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    final newTargetRaw = _targetController.text.replaceAll(
-      RegExp(r'[^0-9]'),
-      '',
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const CircularProgressIndicator(),
+        ),
+      ),
     );
-    final newTarget = double.tryParse(newTargetRaw) ?? Preference.savingsTarget;
-
-    setState(() {
-      _isLoading = true;
-    });
 
     try {
       final db = await DatabaseHelper.instance.database;
@@ -152,24 +96,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       final success = await DatabaseHelper.instance.updateUser(user);
 
+      if (!mounted) return;
+      Navigator.pop(context); // Pop loading dialog
+
       if (success) {
-        // Sync to Firebase (Name only here, photo is synced directly when picked)
-        await FirebaseAuthService().updateUserProfile(newName: newName);
+        // Sync to Firebase (Name only here, photo is synced directly when picked) (fire and forget)
+        FirebaseAuthService().updateUserProfile(newName: newName);
         await Preference.setUsername(newName);
-        await Preference.setSavingsTarget(newTarget);
         if (mounted) {
           setState(() {
             _currentName = newName;
-            _savingsTarget = newTarget;
           });
-          _loadSavingsData(); // Reload progress
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Profil berhasil diperbarui"),
               backgroundColor: Colors.green,
             ),
           );
-          Navigator.pop(context, true); // Close dialog
+          Navigator.pop(context, true); // Close edit dialog
         }
       } else {
         if (mounted) {
@@ -183,18 +127,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
+        Navigator.pop(context); // Pop loading dialog if exception occurred
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Error: ${e.toString()}"),
             backgroundColor: Colors.red,
           ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
       }
     }
   }
@@ -208,7 +147,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
       if (image == null) return;
 
-      setState(() => _isLoading = true);
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const CircularProgressIndicator(),
+          ),
+        ),
+      );
 
       // Convert to base64
       final bytes = await image.readAsBytes();
@@ -221,8 +173,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         setState(() {
           _currentPhotoUrl = base64String;
-          _isLoading = false;
         });
+        Navigator.pop(context); // Close loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Foto Profil berhasil diperbarui"),
@@ -232,7 +184,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        Navigator.pop(context); // Close loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Gagal memperbarui foto: ${e.toString()}"),
@@ -289,7 +241,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showEditProfileDialog() {
     _nameController.text = _currentName;
-    _targetController.text = _savingsTarget.toInt().toString();
     showDialog(
       context: context,
       builder: (context) {
@@ -328,32 +279,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: _nameController,
-                    style: TextStyle(color: theme.primaryColor),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: theme.scaffoldBackgroundColor,
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: theme.dividerColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: primaryAccent, width: 2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Target Tabungan (Rp)",
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: theme.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    keyboardType: TextInputType.number,
                     style: TextStyle(color: theme.primaryColor),
                     decoration: InputDecoration(
                       filled: true,
@@ -435,7 +360,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }) {
     return ListTile(
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
@@ -609,10 +534,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
                   children: [
-                    // Progres Tabungan Card
+                    // Pengaturan Akun Section
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       decoration: BoxDecoration(
                         color: theme.cardColor,
                         borderRadius: BorderRadius.circular(24),
@@ -628,134 +553,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.savings,
-                                color: primaryAccent,
-                                size: 18,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            child: Text(
+                              "PENGATURAN AKUN",
+                              style: TextStyle(
+                                color: theme.textTheme.bodyMedium?.color,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                "PROGRES TABUNGAN",
-                                style: TextStyle(
-                                  color: theme.textTheme.bodyMedium?.color,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _isLoadingData
-                                          ? "..."
-                                          : "${(_progressPercent * 100).toStringAsFixed(0)}% ke Target",
-                                      style: TextStyle(
-                                        color: theme.primaryColor,
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _isLoadingData
-                                          ? "Memuat data..."
-                                          : "Dana Terkumpul: ${_formatRp(_currentSaved)} / ${_formatRp(_savingsTarget)}",
-                                      style: TextStyle(
-                                        color:
-                                            theme.textTheme.bodyMedium?.color,
-                                        fontSize: 11,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _isLoadingData
-                                    ? ""
-                                    : "${_thisMonthSavings >= 0 ? '+' : ''}${_formatRp(_thisMonthSavings)}",
-                                style: TextStyle(
-                                  color: _thisMonthSavings >= 0
-                                      ? primaryAccent
-                                      : Colors.red,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                          _buildListTile(
+                            theme,
+                            Icons.person_outline,
+                            "Informasi Pribadi",
+                            "Perbarui detail profil dan KYC Anda",
+                            onTap: _showEditProfileDialog,
                           ),
-                          const SizedBox(height: 16),
-                          Stack(
-                            children: [
-                              Container(
-                                height: 8,
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: theme.scaffoldBackgroundColor,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              LayoutBuilder(
-                                builder: (context, constraints) {
-                                  return Container(
-                                    height: 8,
-                                    width:
-                                        constraints.maxWidth *
-                                        _progressPercent, // Dinamis!
-                                    decoration: BoxDecoration(
-                                      color: primaryAccent,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
+                          _buildListTile(
+                            theme,
+                            Icons.lock_outline,
+                            "Keamanan & PIN",
+                            "Protokol biometrik dan 2FA",
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Pengaturan Akun Section
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        "PENGATURAN AKUN",
-                        style: TextStyle(
-                          color: theme.textTheme.bodyMedium?.color,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildListTile(
-                      theme,
-                      Icons.person_outline,
-                      "Informasi Pribadi",
-                      "Perbarui detail profil dan KYC Anda",
-                      onTap: _showEditProfileDialog,
-                    ),
-                    _buildListTile(
-                      theme,
-                      Icons.lock_outline,
-                      "Keamanan & PIN",
-                      "Protokol biometrik dan 2FA",
                     ),
 
                     const SizedBox(height: 24),

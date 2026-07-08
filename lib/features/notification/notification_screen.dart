@@ -4,6 +4,7 @@ import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/models/log_model.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -74,6 +75,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
+  String _formatMessage(String message) {
+    return message.replaceAllMapped(RegExp(r'Rp\s*(\d+)(?:\.\d+)?'), (match) {
+      final amount = int.tryParse(match.group(1) ?? '0') ?? 0;
+      final formatted = amount.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]}.',
+      );
+      return 'Rp $formatted';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -110,7 +122,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           size: 64,
                           color: theme.dividerColor,
                         ),
-                      ),
+                      ).animate(onPlay: (controller) => controller.repeat()).shimmer(duration: 2000.ms, color: theme.primaryColor.withOpacity(0.3)),
                       const SizedBox(height: 24),
                       Text(
                         "Belum ada notifikasi",
@@ -119,7 +131,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
-                      ),
+                      ).animate().fade(duration: 600.ms).slideY(begin: 0.2, end: 0),
                       const SizedBox(height: 8),
                       Text(
                         "Semua aktivitas dan peringatan\nakan muncul di sini.",
@@ -127,7 +139,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         style: theme.textTheme.bodyMedium?.copyWith(
                           height: 1.5,
                         ),
-                      ),
+                      ).animate().fade(duration: 600.ms, delay: 200.ms).slideY(begin: 0.2, end: 0),
                     ],
                   ),
                 )
@@ -137,48 +149,75 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   itemCount: _logs.length,
                   itemBuilder: (context, index) {
                     final log = _logs[index];
+                    
+                    Color accentColor;
+                    if (log.type == 'income') {
+                      accentColor = const Color(0xFF00875A);
+                    } else if (log.type == 'expense') {
+                      accentColor = theme.colorScheme.error;
+                    } else {
+                      accentColor = const Color(0xFF4C9AFF);
+                    }
+
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
                         color: theme.cardColor,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: theme.dividerColor),
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.shadowColor.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
-                        leading: _buildIcon(log.type, theme),
-                        title: Text(
-                          log.title,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: theme.primaryColor,
-                            fontSize: 14,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border(
+                              left: BorderSide(color: accentColor, width: 4),
+                            ),
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(16),
+                            leading: _buildIcon(log.type, theme),
+                            title: Text(
+                              log.title,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: theme.primaryColor,
+                                fontSize: 15,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 6),
+                                Text(
+                                  _formatMessage(log.message),
+                                  style: TextStyle(
+                                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
+                                    fontSize: 13,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  _formatDate(log.date),
+                                  style: TextStyle(
+                                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text(
-                              log.message,
-                              style: TextStyle(
-                                color: theme.textTheme.bodyMedium?.color,
-                                fontSize: 12,
-                                height: 1.4,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _formatDate(log.date),
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
-                    );
+                    ).animate().fade(duration: 400.ms, delay: (50 * index).ms).slideX(begin: 0.1, end: 0, curve: Curves.easeOutQuad);
                   },
                 ),
     );
