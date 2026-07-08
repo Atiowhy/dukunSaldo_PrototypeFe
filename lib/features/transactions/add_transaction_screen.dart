@@ -2,10 +2,16 @@ import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:dukunsaldo_fe/database/db_helper.dart';
 import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
-import 'package:dukunsaldo_fe/models/transactions_model.dart';
 import 'package:dukunsaldo_fe/models/log_model.dart';
+import 'package:dukunsaldo_fe/models/transactions_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+
+// tanda untuk pembeda antara pengeluaran dan pemasukkan (di pengeluaran di kasih warna merah)
+// photo profile dikasih default ketika user belum punya photo profile nya
+// tulisan kategori di sesuaikan
+// tambahkan tulisan nominal kalau namanya kepanjangan
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({super.key, this.transaction});
@@ -23,7 +29,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String _selectedCategory = "Makanan";
   DateTime _selectedDate = DateTime.now();
   bool _isSubscription = false;
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   final List<Map<String, dynamic>> _expenseCategories = [
     {"name": "Makanan", "icon": Icons.restaurant},
@@ -44,13 +50,31 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     {"name": "Lain-lain", "icon": Icons.list},
   ];
 
-  List<Map<String, dynamic>> get _categories => _selectedType == 'expense' ? _expenseCategories : _incomeCategories;
+  List<Map<String, dynamic>> get _categories =>
+      _selectedType == 'expense' ? _expenseCategories : _incomeCategories;
+
+  String _formatNumber(String s) {
+    String value = s.replaceAll(RegExp(r'[^0-9]'), '');
+    if (value.isEmpty) return '';
+    String formatted = '';
+    int count = 0;
+    for (int i = value.length - 1; i >= 0; i--) {
+      formatted = value[i] + formatted;
+      count++;
+      if (count % 3 == 0 && i != 0) {
+        formatted = '.$formatted';
+      }
+    }
+    return formatted;
+  }
 
   @override
   void initState() {
     super.initState();
     if (widget.transaction != null) {
-      _amountController.text = widget.transaction!.amount.toInt().toString();
+      _amountController.text = _formatNumber(
+        widget.transaction!.amount.toInt().toString(),
+      );
       _notesController.text = widget.transaction!.merchantName;
       _selectedType = widget.transaction!.type;
       _selectedCategory = widget.transaction!.category;
@@ -99,7 +123,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   void _submitData() async {
-    final txtAmount = _amountController.text.trim();
+    final txtAmount = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
     final double? amount = double.tryParse(txtAmount);
     final notes = _notesController.text.trim();
 
@@ -110,11 +134,23 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const CircularProgressIndicator(),
+        ),
+      ),
+    );
 
-    int generatedId = widget.transaction?.id ?? DateTime.now().millisecondsSinceEpoch;
+    int generatedId =
+        widget.transaction?.id ?? DateTime.now().millisecondsSinceEpoch;
 
     final transaksiBaru = TransactionModel(
       id: generatedId,
@@ -127,38 +163,39 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       isSubscription: _isSubscription,
     );
 
-    bool success = false;
+    bool success = true;
 
     if (widget.transaction == null) {
       // Save locally
       await DatabaseHelper.instance.insertTransaction(transaksiBaru);
-      // Save to Firebase
-      success = await FirebaseDbHelper.instance.insertTransaction(transaksiBaru);
+      // Save to Firebase (fire and forget)
+      FirebaseDbHelper.instance.insertTransaction(transaksiBaru);
     } else {
       // Update locally
       await DatabaseHelper.instance.updateTransaction(transaksiBaru);
-      // Update to Firebase
-      success = await FirebaseDbHelper.instance.updateTransaction(transaksiBaru);
+      // Update to Firebase (fire and forget)
+      FirebaseDbHelper.instance.updateTransaction(transaksiBaru);
     }
 
     if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-    });
+    Navigator.pop(context); // Tutup dialog loading
 
     if (success) {
       final logData = LogModel(
         userId: Preference.userId,
-        title: widget.transaction == null ? "Transaksi Baru" : "Update Transaksi",
-        message: "Anda mencatat ${_selectedType == 'income' ? 'pemasukan' : 'pengeluaran'} sebesar Rp $amount untuk kategori $_selectedCategory.",
+        title: widget.transaction == null
+            ? "Transaksi Baru"
+            : "Update Transaksi",
+        message:
+            "Anda mencatat ${_selectedType == 'income' ? 'pemasukan' : 'pengeluaran'} sebesar Rp $amount untuk kategori $_selectedCategory.",
         date: DateTime.now().toIso8601String(),
         type: _selectedType,
       );
-      
+
       // Save log locally
       await DatabaseHelper.instance.insertLog(logData);
-      // Save log to Firebase
-      await FirebaseDbHelper.instance.insertLog(logData);
+      // Save log to Firebase (fire and forget)
+      FirebaseDbHelper.instance.insertLog(logData);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -365,6 +402,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         child: TextField(
                           controller: _amountController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            CurrencyFormat(),
+                          ],
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
@@ -702,6 +743,37 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class CurrencyFormat extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.selection.baseOffset == 0) {
+      return newValue;
+    }
+    String value = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (value.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    String formatted = '';
+    int count = 0;
+    for (int i = value.length - 1; i >= 0; i--) {
+      formatted = value[i] + formatted;
+      count++;
+      if (count % 3 == 0 && i != 0) {
+        formatted = '.$formatted';
+      }
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

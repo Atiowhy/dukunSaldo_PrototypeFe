@@ -1,10 +1,11 @@
-import 'package:dukunsaldo_fe/database/db_helper.dart';
 import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/models/transactions_model.dart';
 import 'package:dukunsaldo_fe/service/finance_analysis_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
+// button kelola langgan dan nanti nya di hapus, karna tidak di perlukan
 
 class RecommendationPage extends StatefulWidget {
   final int refreshTrigger;
@@ -36,7 +37,8 @@ class _RecommendationPageState extends State<RecommendationPage> {
 
   Future<void> _fetchAndAnalyzeData() async {
     int activeUserId = Preference.userId;
-    List<TransactionModel> transactions = await FirebaseDbHelper.instance.getTransactionsByUserId(activeUserId);
+    List<TransactionModel> transactions = await FirebaseDbHelper.instance
+        .getTransactionsByUserId(activeUserId);
 
     // Jalankan kalkulator rekomendasi
     final data = FinanceAnalysisService.generateRecommendations(transactions);
@@ -75,7 +77,12 @@ class _RecommendationPageState extends State<RecommendationPage> {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Padding(
-        padding: const EdgeInsets.only(left: 24, right: 24, top: 16, bottom: 120),
+        padding: const EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 16,
+          bottom: 120,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -117,7 +124,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Text(
-                          "AI Powered",
+                          "DES Powered",
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -263,7 +270,9 @@ class _RecommendationPageState extends State<RecommendationPage> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: LinearProgressIndicator(
-                      value: data.totalPotentialSavings > 0 ? data.efficiencyProgress : 0.0,
+                      value: data.totalPotentialSavings > 0
+                          ? data.efficiencyProgress
+                          : 0.0,
                       backgroundColor: Colors.grey[300],
                       color: const Color(0xFF00875A),
                       minHeight: 8,

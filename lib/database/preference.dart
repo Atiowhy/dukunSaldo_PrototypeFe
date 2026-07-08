@@ -15,7 +15,7 @@ class Preference {
 
   static bool get hasSeenOnboarding => _prefs?.getBool('hasSeenOnboarding') ?? false;
   static bool get isBalanceHidden => _prefs?.getBool('isBalanceHidden') ?? false;
-  static double get savingsTarget => _prefs?.getDouble('savingsTarget') ?? 5000000.0;
+  static int get lastReadLogCount => _prefs?.getInt('lastReadLogCount') ?? 0;
 
   static Future<void> saveUserSession(int id, String name, String email, [String? photoUrl]) async {
     await _prefs?.setBool('isLogin', true);
@@ -41,8 +41,9 @@ class Preference {
     await _prefs?.setBool('isBalanceHidden', value);
   }
 
-  static Future<void> setSavingsTarget(double value) async {
-    await _prefs?.setDouble('savingsTarget', value);
+
+  static Future<void> setLastReadLogCount(int value) async {
+    await _prefs?.setInt('lastReadLogCount', value);
   }
 
   // Fungsi hapus sesi saat LOGOUT

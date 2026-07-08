@@ -1,6 +1,7 @@
 import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../models/transactions_model.dart';
 
@@ -16,7 +17,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   String _selectedCategory = "Semua";
 
   List<TransactionModel> _allTransactions = [];
-  List<TransactionModel> _filteredTransactions = [];
+  final List<dynamic> _listItems = [];
   bool _isLoading = true;
 
   final List<String> _kategoryList = [
@@ -40,7 +41,16 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     final data = await FirebaseDbHelper.instance.getTransactionsByUserId(
       Preference.userId,
     );
-    data.sort((a, b) => (b.id ?? 0).compareTo(a.id ?? 0));
+    // Urutkan berdasarkan tanggal input user (descending)
+    data.sort((a, b) {
+      final dateA =
+          DateTime.tryParse(a.date) ??
+          DateTime.fromMillisecondsSinceEpoch(a.id ?? 0);
+      final dateB =
+          DateTime.tryParse(b.date) ??
+          DateTime.fromMillisecondsSinceEpoch(b.id ?? 0);
+      return dateB.compareTo(dateA);
+    });
 
     if (!mounted) return;
     setState(() {
@@ -50,9 +60,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     });
   }
 
+  // logic filter kategori riwayat transaksi
   void _applyFilters() {
     setState(() {
-      _filteredTransactions = _allTransactions.where((trx) {
+      final filtered = _allTransactions.where((trx) {
         if (_selectedCategory == "Semua") return true;
 
         if (_selectedCategory == "Pemasukkan") {
@@ -64,9 +75,30 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
         return trx.category.toLowerCase() == _selectedCategory.toLowerCase();
       }).toList();
+
+      _listItems.clear();
+      String currentMonth = "";
+
+      for (var trx in filtered) {
+        try {
+          final date = DateTime.parse(trx.date);
+          final monthStr = DateFormat('MMMM yyyy', 'id_ID').format(date);
+          if (monthStr != currentMonth) {
+            currentMonth = monthStr;
+            _listItems.add(monthStr); // Tambahkan header bulan
+          }
+        } catch (e) {
+          if (currentMonth != "Lainnya") {
+            currentMonth = "Lainnya";
+            _listItems.add(currentMonth);
+          }
+        }
+        _listItems.add(trx);
+      }
     });
   }
 
+  // fungsi format Rupiah
   String formatRupiah(int amount) {
     return amount.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
@@ -162,7 +194,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 const SizedBox(height: 8),
 
                 Expanded(
-                  child: _filteredTransactions.isEmpty
+                  child: _listItems.isEmpty
                       ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -202,10 +234,28 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                             vertical: 16,
                           ),
                           physics: const BouncingScrollPhysics(),
-                          itemCount: _filteredTransactions.length,
+                          itemCount: _listItems.length,
                           itemBuilder: (context, index) {
-                            final trx = _filteredTransactions[index];
+                            final item = _listItems[index];
 
+                            if (item is String) {
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8,
+                                  bottom: 16,
+                                ),
+                                child: Text(
+                                  item,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.primaryColor,
+                                  ),
+                                ),
+                              );
+                            }
+
+                            final trx = item as TransactionModel;
                             final bool isIncome = trx.type == "income";
 
                             return Container(
@@ -247,6 +297,30 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                           trx.category,
                                           style: theme.textTheme.bodyMedium
                                               ?.copyWith(fontSize: 13),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          (() {
+                                            try {
+                                              return DateFormat(
+                                                'dd MMM yyyy',
+                                                'id_ID',
+                                              ).format(
+                                                DateTime.parse(trx.date),
+                                              );
+                                            } catch (e) {
+                                              return trx.date;
+                                            }
+                                          })(),
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                fontSize: 11,
+                                                color: theme
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.color
+                                                    ?.withOpacity(0.6),
+                                              ),
                                         ),
                                       ],
                                     ),

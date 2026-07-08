@@ -24,8 +24,11 @@ class _RegisterState extends State<Register> {
   // final TextEditingController _cityController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _isAgreedToTerms = false;
 
   late TapGestureRecognizer _loginTapRecognizer;
+  late TapGestureRecognizer _termsTapRecognizer;
+  late TapGestureRecognizer _privacyTapRecognizer;
 
   void register() async {
     final username = _username.text;
@@ -36,6 +39,15 @@ class _RegisterState extends State<Register> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Isi semua field")));
+      return;
+    }
+
+    if (!_isAgreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Anda harus menyetujui Syarat dan Ketentuan"),
+        ),
+      );
       return;
     }
 
@@ -98,14 +110,80 @@ class _RegisterState extends State<Register> {
           MaterialPageRoute(builder: (context) => Login()),
         );
       };
+
+    _termsTapRecognizer = TapGestureRecognizer()..onTap = _showTermsDialog;
+    _privacyTapRecognizer = TapGestureRecognizer()..onTap = _showPrivacyDialog;
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _username.dispose();
     _loginTapRecognizer.dispose();
+    _termsTapRecognizer.dispose();
+    _privacyTapRecognizer.dispose();
     super.dispose();
+  }
+
+  void _showTermsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).cardColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text("Syarat & Ketentuan", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Text(
+              "Selamat datang di Dukun Saldo.\n\n"
+              "1. Layanan: Aplikasi ini ditujukan sebagai prototipe manajemen keuangan pribadi.\n"
+              "2. Penggunaan: Pengguna setuju untuk tidak menyalahgunakan layanan untuk tindakan ilegal.\n"
+              "3. Tanggung Jawab: Kami tidak bertanggung jawab atas kerugian finansial yang diakibatkan oleh keputusan Anda sendiri.\n"
+              "4. Perubahan Syarat: Kami berhak mengubah syarat dan ketentuan sewaktu-waktu.\n\n"
+              "Dengan menggunakan aplikasi ini, Anda dianggap setuju dengan syarat & ketentuan di atas.",
+              style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 13, height: 1.5),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Tutup"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showPrivacyDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).cardColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text("Kebijakan Privasi", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Text(
+              "Kebijakan Privasi Dukun Saldo:\n\n"
+              "1. Data Pribadi: Kami mengumpulkan data dasar seperti nama dan email Anda saat pendaftaran untuk keperluan autentikasi.\n"
+              "2. Keamanan: Data Anda disimpan dengan aman dan tidak akan diperjualbelikan kepada pihak ketiga.\n"
+              "3. Transaksi: Data riwayat keuangan Anda dienkripsi (jika tersedia) dan hanya dapat diakses oleh Anda.\n"
+              "4. Cookie & Pelacakan: Kami menggunakan sesi sementara untuk menjaga agar Anda tetap masuk.\n\n"
+              "Jika Anda memiliki pertanyaan tentang privasi, silakan hubungi tim kami.",
+              style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 13, height: 1.5),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Tutup"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -234,6 +312,58 @@ class _RegisterState extends State<Register> {
                                           prefixIcon: Icons.lock,
                                           controller: _passwordController,
                                           isPassword: true,
+                                        ),
+                                        SizedBox(height: 16),
+                                        Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            SizedBox(
+                                              height: 24,
+                                              width: 24,
+                                              child: Checkbox(
+                                                value: _isAgreedToTerms,
+                                                onChanged: (value) {
+                                                  setState(() {
+                                                    _isAgreedToTerms =
+                                                        value ?? false;
+                                                  });
+                                                },
+                                                activeColor: theme.primaryColor,
+                                              ),
+                                            ),
+                                            SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text.rich(
+                                                TextSpan(
+                                                  text: "Saya menyetujui ",
+                                                  style: theme
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.copyWith(fontSize: 13),
+                                                  children: [
+                                                    TextSpan(
+                                                      text: "Syarat & Ketentuan",
+                                                      style: TextStyle(
+                                                        color: theme.primaryColor,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                      recognizer: _termsTapRecognizer,
+                                                    ),
+                                                    TextSpan(text: " serta "),
+                                                    TextSpan(
+                                                      text: "Kebijakan Privasi",
+                                                      style: TextStyle(
+                                                        color: theme.primaryColor,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                      recognizer: _privacyTapRecognizer,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),

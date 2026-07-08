@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:dukunsaldo_fe/core/providers/theme_provider.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
@@ -13,9 +14,9 @@ import 'package:dukunsaldo_fe/service/finance_analysis_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
-import 'package:sqlite_viewer2/sqlite_viewer.dart';
 
 import '../../database/db_helper.dart';
 import '../../database/firebase_db_helper.dart';
@@ -42,9 +43,9 @@ class _HomePageState extends State<HomePage> {
   List<FlSpot> _predictChartSpots = [];
   List<String> _chartLabels = [];
 
-  // 👇 Variabel baru untuk melacak kesiapan DES (min 2 bulan)
   int _uniqueMonthsCount = 0;
   int _notificationCount = 0;
+  int _totalLogsCount = 0;
   bool _isBalanceHidden = false;
 
   void _onItemTapped(int index) {
@@ -103,15 +104,18 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _fetchTransactions() async {
     int activeUserId = Preference.userId;
-    
+
     // Fetch directly from Firebase
-    List<TransactionModel> transactionModels = await FirebaseDbHelper.instance.getTransactionsByUserId(activeUserId);
+    List<TransactionModel> transactionModels = await FirebaseDbHelper.instance
+        .getTransactionsByUserId(activeUserId);
 
     // Urutkan dari yang terbaru (id DESC)
     transactionModels.sort((a, b) => (b.id ?? 0).compareTo(a.id ?? 0));
 
     // Bikin format list map untuk UI compatibility (karena sebelumnya pakai db.query yg nge-return List<Map>)
-    List<Map<String, dynamic>> maps = transactionModels.map((t) => t.toMap()).toList();
+    List<Map<String, dynamic>> maps = transactionModels
+        .map((t) => t.toMap())
+        .toList();
 
     // 👇 LOGIKA BARU: Hitung ada berapa bulan unik di dalam database
     Set<String> uniqueMonths = {};
@@ -181,9 +185,27 @@ class _HomePageState extends State<HomePage> {
         false;
 
     if (confirm) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const CircularProgressIndicator(),
+          ),
+        ),
+      );
+
       await DatabaseHelper.instance.deleteTransaction(id);
-      await FirebaseDbHelper.instance.deleteTransaction(id);
-      _fetchTransactions();
+      FirebaseDbHelper.instance.deleteTransaction(id); // Fire and forget
+      await _fetchTransactions();
+
+      if (!mounted) return;
+      Navigator.pop(context); // Tutup dialog loading
     }
   }
 
@@ -191,10 +213,12 @@ class _HomePageState extends State<HomePage> {
     int activeUserId = Preference.userId;
     // Fetch logs from Firebase
     final logs = await FirebaseDbHelper.instance.getLogsByUserId(activeUserId);
-    
+
     if (mounted) {
       setState(() {
-        _notificationCount = logs.length;
+        _totalLogsCount = logs.length;
+        int unread = logs.length - Preference.lastReadLogCount;
+        _notificationCount = unread > 0 ? unread : 0;
       });
     }
   }
@@ -228,52 +252,100 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Halo, $userName 👋",
-              style: TextStyle(
-                fontSize: 14,
-                color: theme.textTheme.bodyMedium?.color,
-                fontWeight: FontWeight.normal,
-              ),
+        toolbarHeight: 70, // Memberikan sedikit ruang tambahan
+        title: Padding(
+          padding: const EdgeInsets.only(
+            left: 8.0,
+          ), // Sejajarkan dengan tepi konten
+          child: Text(
+            "Dashboard",
+            style: TextStyle(
+              color: theme.primaryColor,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
             ),
-            Text(
-              "Dashboard",
-              style: TextStyle(
-                color: theme.primaryColor,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+          ),
         ),
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         iconTheme: IconThemeData(color: theme.primaryColor),
         actions: [
-          IconButton(
-            icon: _notificationCount > 0
-                ? Badge(
-                    label: Text(_notificationCount.toString()),
-                    backgroundColor: Colors.redAccent,
-                    child: const Icon(Icons.notifications_active),
-                  )
-                : const Icon(Icons.notifications_none),
-            color: theme.primaryColor,
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NotificationScreen(),
-                ),
-              );
-              // Refresh notifikasi setelah kembali dari halaman notifikasi (jika ada fitur baca/hapus nanti)
-              _fetchNotifications();
-            },
+          // Icon Notification dengan container border halus
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              shape: BoxShape.circle,
+              border: Border.all(color: theme.dividerColor, width: 1.5),
+            ),
+            child: IconButton(
+              iconSize: 22,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              icon: _notificationCount > 0
+                  ? Badge(
+                      label: Text(_notificationCount.toString()),
+                      backgroundColor: Colors.redAccent,
+                      child: const Icon(Icons.notifications_active),
+                    )
+                  : const Icon(Icons.notifications_none),
+              color: theme.primaryColor,
+              onPressed: () async {
+                await Preference.setLastReadLogCount(_totalLogsCount);
+                setState(() {
+                  _notificationCount = 0;
+                });
+
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationScreen(),
+                  ),
+                );
+                _fetchNotifications();
+              },
+            ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
+          // Foto Profil
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              ).then((_) {
+                setState(() {});
+              });
+            },
+            child: Container(
+              margin: const EdgeInsets.only(right: 24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: theme.primaryColor.withOpacity(0.3),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.primaryColor.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: CircleAvatar(
+                radius: 20,
+                backgroundColor: theme.cardColor,
+                backgroundImage: Preference.photoUrl.isNotEmpty
+                    ? (Preference.photoUrl.startsWith('http')
+                          ? NetworkImage(Preference.photoUrl)
+                          : MemoryImage(base64Decode(Preference.photoUrl))
+                                as ImageProvider)
+                    : const AssetImage("assets/images/orang.jpg"),
+              ),
+            ),
+          ),
         ],
       ),
       drawer: _buildDrawer(
@@ -459,9 +531,9 @@ class _HomePageState extends State<HomePage> {
                 ),
                 image: Preference.photoUrl.isNotEmpty
                     ? (Preference.photoUrl.startsWith('http')
-                        ? NetworkImage(Preference.photoUrl)
-                        : MemoryImage(base64Decode(Preference.photoUrl))
-                            as ImageProvider)
+                          ? NetworkImage(Preference.photoUrl)
+                          : MemoryImage(base64Decode(Preference.photoUrl))
+                                as ImageProvider)
                     : const AssetImage("assets/images/orang.jpg"),
               ),
             ),
@@ -474,9 +546,9 @@ class _HomePageState extends State<HomePage> {
                 backgroundColor: theme.scaffoldBackgroundColor.withOpacity(0.5),
                 backgroundImage: Preference.photoUrl.isNotEmpty
                     ? (Preference.photoUrl.startsWith('http')
-                        ? NetworkImage(Preference.photoUrl)
-                        : MemoryImage(base64Decode(Preference.photoUrl))
-                            as ImageProvider)
+                          ? NetworkImage(Preference.photoUrl)
+                          : MemoryImage(base64Decode(Preference.photoUrl))
+                                as ImageProvider)
                     : const AssetImage("assets/images/orang.jpg"),
               ),
             ),
@@ -515,20 +587,6 @@ class _HomePageState extends State<HomePage> {
               });
             },
           ),
-          ListTile(
-            leading: Icon(Icons.bug_report, color: theme.primaryColor),
-            title: Text(
-              "SQLite Viewer",
-              style: TextStyle(color: theme.primaryColor),
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const DatabaseList()),
-              );
-            },
-          ),
 
           Padding(
             padding: const EdgeInsets.only(left: 24, top: 24),
@@ -553,6 +611,9 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHomeContent(ThemeData theme, bool isDarkMode) {
     final List<Map<String, dynamic>> displayList = _localTransactions;
+    final String userName = Preference.username.isEmpty
+        ? "Guest"
+        : Preference.username;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -706,6 +767,32 @@ class _HomePageState extends State<HomePage> {
                                             style: theme.textTheme.bodyMedium
                                                 ?.copyWith(fontSize: 13),
                                           ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            (() {
+                                              try {
+                                                return DateFormat(
+                                                  'dd MMM yyyy',
+                                                  'id_ID',
+                                                ).format(
+                                                  DateTime.parse(
+                                                    trx['date'] ?? '',
+                                                  ),
+                                                );
+                                              } catch (e) {
+                                                return trx['date'] ?? '';
+                                              }
+                                            })(),
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  fontSize: 11,
+                                                  color: theme
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.color
+                                                      ?.withOpacity(0.6),
+                                                ),
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -856,7 +943,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    "Kesiapan AI Prediksi",
+                    "Kesiapan Prediksi",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: theme.primaryColor,
@@ -1409,7 +1496,9 @@ class _HomePageState extends State<HomePage> {
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontSize: 11,
                         height: 1.4,
-                        color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
+                        color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                          0.8,
+                        ),
                       ),
                     ),
                   ),
