@@ -24,6 +24,7 @@ class _RegisterState extends State<Register> {
   // final TextEditingController _cityController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _isAgreedToTerms = false;
 
   late TapGestureRecognizer _loginTapRecognizer;
 
@@ -36,6 +37,15 @@ class _RegisterState extends State<Register> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Isi semua field")));
+      return;
+    }
+
+    if (!_isAgreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Anda harus menyetujui Syarat dan Ketentuan"),
+        ),
+      );
       return;
     }
 
@@ -234,6 +244,61 @@ class _RegisterState extends State<Register> {
                                           prefixIcon: Icons.lock,
                                           controller: _passwordController,
                                           isPassword: true,
+                                        ),
+                                        SizedBox(height: 16),
+                                        Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            SizedBox(
+                                              height: 24,
+                                              width: 24,
+                                              child: Checkbox(
+                                                value: _isAgreedToTerms,
+                                                onChanged: (value) {
+                                                  setState(() {
+                                                    _isAgreedToTerms =
+                                                        value ?? false;
+                                                  });
+                                                },
+                                                activeColor: theme.primaryColor,
+                                              ),
+                                            ),
+                                            SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text.rich(
+                                                TextSpan(
+                                                  text: "Saya menyetujui ",
+                                                  style: theme
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.copyWith(fontSize: 13),
+                                                  children: [
+                                                    TextSpan(
+                                                      text:
+                                                          "Syarat & Ketentuan",
+                                                      style: TextStyle(
+                                                        color:
+                                                            theme.primaryColor,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    TextSpan(text: " serta "),
+                                                    TextSpan(
+                                                      text: "Kebijakan Privasi",
+                                                      style: TextStyle(
+                                                        color:
+                                                            theme.primaryColor,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),

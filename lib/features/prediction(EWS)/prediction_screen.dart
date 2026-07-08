@@ -1,5 +1,4 @@
 import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
-import 'package:dukunsaldo_fe/database/db_helper.dart';
 import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/models/transactions_model.dart';
@@ -19,7 +18,7 @@ class AdvisorPage extends StatefulWidget {
 class _AdvisorPageState extends State<AdvisorPage> {
   bool _isLoading = true;
   AdvisorModel? _advisorData;
-  double _currentBalance = 0;
+  final double _currentBalance = 0;
 
   @override
   void initState() {
@@ -37,7 +36,8 @@ class _AdvisorPageState extends State<AdvisorPage> {
 
   Future<void> _fetchAndAnalyzeData() async {
     int activeUserId = Preference.userId;
-    List<TransactionModel> transactions = await FirebaseDbHelper.instance.getTransactionsByUserId(activeUserId);
+    List<TransactionModel> transactions = await FirebaseDbHelper.instance
+        .getTransactionsByUserId(activeUserId);
     transactions.sort((a, b) => (a.id ?? 0).compareTo(b.id ?? 0));
 
     double currentBalance = 0;
@@ -665,12 +665,16 @@ class _AdvisorPageState extends State<AdvisorPage> {
                           ),
                           TextSpan(
                             text: data.isDeficit
-                                ? "Peringatan! Pengeluaran Anda bulan ini ${realDifference > 0 ? 'naik sebesar ${formatCompact(realDifference.abs())}' : realDifference < 0 ? 'turun sebesar ${formatCompact(realDifference.abs())}' : 'cenderung stabil'}, NAMUN prediksi bulan depan (${formatCompact(data.nextMonthForecast)}) berpotensi melampaui sisa saldo Anda saat ini. Segera kurangi pengeluaran agar terhindar dari defisit!"
+                                ? "Peringatan! Pengeluaran Anda bulan ini ${realDifference > 0
+                                      ? 'naik sebesar ${formatCompact(realDifference.abs())}'
+                                      : realDifference < 0
+                                      ? 'turun sebesar ${formatCompact(realDifference.abs())}'
+                                      : 'cenderung stabil'}, NAMUN prediksi bulan depan (${formatCompact(data.nextMonthForecast)}) berpotensi melampaui sisa saldo Anda saat ini. Segera kurangi pengeluaran agar terhindar dari defisit!"
                                 : (realDifference > 0
-                                      ? "Pengeluaran Anda bulan ini nyata naik sebesar ${formatCompact(realDifference.abs())} dari bulan lalu. Jika dibiarkan, AI memprediksi pengeluaran bulan depan bisa mencapai ${formatCompact(data.nextMonthForecast)}. Pertimbangkan untuk membatasi belanja tersier."
+                                      ? "Pengeluaran Anda bulan ini nyata naik sebesar ${formatCompact(realDifference.abs())} dari bulan lalu. Jika dibiarkan, DES memprediksi pengeluaran bulan depan bisa mencapai ${formatCompact(data.nextMonthForecast)}. Pertimbangkan untuk membatasi belanja tersier."
                                       : (realDifference < 0
-                                            ? "Bagus! Pengeluaran Anda bulan ini berhasil ditekan turun sebesar ${formatCompact(realDifference.abs())}. AI memprediksi Anda bisa menekan pengeluaran bulan depan hingga ${formatCompact(data.nextMonthForecast)}. Pertahankan kebiasaan baik ini!"
-                                            : "Pengeluaran Anda bulan ini sangat stabil. AI memprediksi pengeluaran bulan depan akan berada di kisaran ${formatCompact(data.nextMonthForecast)}. Terus pertahankan pengelolaan keuangan Anda!")),
+                                            ? "Bagus! Pengeluaran Anda bulan ini berhasil ditekan turun sebesar ${formatCompact(realDifference.abs())}. DES memprediksi Anda bisa menekan pengeluaran bulan depan hingga ${formatCompact(data.nextMonthForecast)}. Pertahankan kebiasaan baik ini!"
+                                            : "Pengeluaran Anda bulan ini sangat stabil. DES memprediksi pengeluaran bulan depan akan berada di kisaran ${formatCompact(data.nextMonthForecast)}. Terus pertahankan pengelolaan keuangan Anda!")),
                             style: const TextStyle(fontSize: 13, height: 1.4),
                           ),
                         ],

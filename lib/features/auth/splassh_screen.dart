@@ -6,6 +6,7 @@ import 'package:dukunsaldo_fe/features/home/home_screen.dart';
 import 'package:dukunsaldo_fe/features/onboarding/onboarding_screen.dart';
 import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -101,6 +102,56 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
           ),
+
+          // ==============================
+          // SMOKE EFFECT (ASAP)
+          // ==============================
+          ...List.generate(6, (index) {
+            final isEven = index % 2 == 0;
+            final delay = index * 400;
+            final duration = 3000 + (index * 200);
+            return Positioned(
+              bottom: -50,
+              left: 50.0 + (index * 40),
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDarkMode
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.black.withOpacity(0.05),
+                ),
+              )
+                  .animate(
+                    onPlay: (controller) => controller.repeat(),
+                    delay: delay.ms,
+                  )
+                  .moveY(
+                    begin: 0,
+                    end: -MediaQuery.of(context).size.height * 0.7,
+                    duration: duration.ms,
+                    curve: Curves.easeOut,
+                  )
+                  .moveX(
+                    begin: 0,
+                    end: isEven ? 100 : -100,
+                    duration: duration.ms,
+                    curve: Curves.easeInOutSine,
+                  )
+                  .scale(
+                    begin: const Offset(0.5, 0.5),
+                    end: const Offset(4.0, 4.0),
+                    duration: duration.ms,
+                  )
+                  .fade(
+                    begin: 0.8,
+                    end: 0.0,
+                    duration: duration.ms,
+                    curve: Curves.easeOut,
+                  ),
+            );
+          }),
 
           // ==============================
           // GLASSMORPHISM BLUR LAYER
