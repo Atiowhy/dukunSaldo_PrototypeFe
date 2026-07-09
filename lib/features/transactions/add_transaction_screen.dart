@@ -25,8 +25,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
-  String _selectedType = "expense";
-  String _selectedCategory = "Makanan";
+  String _selectedType = "income";
+  String _selectedCategory = "Gaji";
   DateTime _selectedDate = DateTime.now();
   bool _isSubscription = false;
   final bool _isLoading = false;
@@ -281,45 +281,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     child: GestureDetector(
                       onTap: () {
                         setState(() {
-                          _selectedType = "expense";
-                          _selectedCategory = _expenseCategories.first["name"];
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: _selectedType == "expense"
-                              ? primaryAccent
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: _selectedType == "expense"
-                              ? [
-                                  BoxShadow(
-                                    color: primaryAccent.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                              : [],
-                        ),
-                        child: Text(
-                          "Pengeluaran",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: _selectedType == "expense"
-                                ? onPrimaryAccent
-                                : theme.textTheme.bodyMedium?.color,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
                           _selectedType = "income";
                           _selectedCategory = _incomeCategories.first["name"];
                         });
@@ -347,6 +308,45 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: _selectedType == "income"
+                                ? onPrimaryAccent
+                                : theme.textTheme.bodyMedium?.color,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedType = "expense";
+                          _selectedCategory = _expenseCategories.first["name"];
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: _selectedType == "expense"
+                              ? primaryAccent
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: _selectedType == "expense"
+                              ? [
+                                  BoxShadow(
+                                    color: primaryAccent.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : [],
+                        ),
+                        child: Text(
+                          "Pengeluaran",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: _selectedType == "expense"
                                 ? onPrimaryAccent
                                 : theme.textTheme.bodyMedium?.color,
                             fontWeight: FontWeight.bold,

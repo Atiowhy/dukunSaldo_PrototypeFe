@@ -28,7 +28,6 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  // final TextEditingController _cityController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
@@ -51,7 +50,6 @@ class _LoginState extends State<Login> {
     final pengguna = await authService.signIn(email, pass);
 
     if (pengguna != null) {
-      // Sync user to local database so foreign keys work!
       await DatabaseHelper.instance.registerUser(
         UserModelSql(
           id: pengguna.id,
@@ -62,7 +60,6 @@ class _LoginState extends State<Login> {
       );
     }
 
-    // Cek apakah widget masih terpasang (mounted) sebelum menggunakan context
     if (!mounted) return;
 
     setState(() {

@@ -522,21 +522,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.only(top: 120, bottom: 70),
               decoration: BoxDecoration(
                 color: primaryAccent.withOpacity(0.2),
-                image: DecorationImage(
-                  fit: BoxFit.cover,
-                  colorFilter: ColorFilter.mode(
-                    Colors.black.withOpacity(
-                      0.6,
-                    ), // Slightly darker for text readability
-                    BlendMode.darken,
-                  ),
-                  image: _currentPhotoUrl.isNotEmpty
-                      ? (_currentPhotoUrl.startsWith('http')
+                image: _currentPhotoUrl.isNotEmpty
+                    ? DecorationImage(
+                        fit: BoxFit.cover,
+                        colorFilter: ColorFilter.mode(
+                          Colors.black.withOpacity(0.6),
+                          BlendMode.darken,
+                        ),
+                        image: (_currentPhotoUrl.startsWith('http')
                             ? NetworkImage(_currentPhotoUrl)
                             : MemoryImage(base64Decode(_currentPhotoUrl))
-                                  as ImageProvider)
-                      : const AssetImage("assets/images/orang.jpg"),
-                ),
+                                as ImageProvider),
+                      )
+                    : null,
               ),
               child: Column(
                 children: [
@@ -555,12 +553,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           backgroundImage: _currentPhotoUrl.isNotEmpty
                               ? (_currentPhotoUrl.startsWith('http')
                                     ? NetworkImage(_currentPhotoUrl)
-                                    : MemoryImage(
-                                            base64Decode(_currentPhotoUrl),
-                                          )
-                                          as ImageProvider)
-                              : const AssetImage("assets/images/orang.jpg")
-                                    as ImageProvider,
+                                    : MemoryImage(base64Decode(_currentPhotoUrl))
+                                        as ImageProvider)
+                              : null,
+                          child: _currentPhotoUrl.isEmpty
+                              ? const Icon(Icons.person, size: 60, color: Colors.white)
+                              : null,
                         ),
                       ),
                       GestureDetector(

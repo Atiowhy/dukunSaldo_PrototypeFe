@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:dukunsaldo_fe/core/providers/theme_provider.dart';
@@ -8,6 +9,7 @@ import 'package:dukunsaldo_fe/features/notification/notification_screen.dart';
 import 'package:dukunsaldo_fe/features/profile/profile_screen.dart';
 import 'package:dukunsaldo_fe/features/report/report_screen.dart';
 import 'package:dukunsaldo_fe/features/transactions/add_transaction_screen.dart';
+import 'package:dukunsaldo_fe/models/log_model.dart';
 import 'package:dukunsaldo_fe/models/summary_model.dart';
 import 'package:dukunsaldo_fe/models/transactions_model.dart';
 import 'package:dukunsaldo_fe/service/finance_analysis_service.dart';
@@ -49,6 +51,23 @@ class _HomePageState extends State<HomePage> {
   int _notificationCount = 0;
   int _totalLogsCount = 0;
   bool _isBalanceHidden = false;
+
+  Uint8List? _profileImageBytes;
+  String _cachedPhotoUrl = "";
+
+  ImageProvider? _getProfileImageProvider() {
+    if (Preference.photoUrl.isEmpty) {
+      return null;
+    }
+    if (Preference.photoUrl.startsWith('http')) {
+      return NetworkImage(Preference.photoUrl);
+    }
+    if (_cachedPhotoUrl != Preference.photoUrl) {
+      _cachedPhotoUrl = Preference.photoUrl;
+      _profileImageBytes = base64Decode(Preference.photoUrl);
+    }
+    return MemoryImage(_profileImageBytes!);
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -147,7 +166,12 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _deleteTransaction(int id) async {
+  void _deleteTransaction(Map<String, dynamic> trx) async {
+    int id = trx['id'];
+    double amount = (trx['amount'] as num).toDouble();
+    String type = trx['type'];
+    String category = trx['category'];
+
     bool confirm =
         await showDialog(
           context: context,
@@ -204,7 +228,24 @@ class _HomePageState extends State<HomePage> {
 
       await DatabaseHelper.instance.deleteTransaction(id);
       FirebaseDbHelper.instance.deleteTransaction(id); // Fire and forget
+
+      // Simpan log penghapusan transaksi
+      final logData = LogModel(
+        userId: Preference.userId,
+        title: "Hapus Transaksi",
+        message:
+            "Anda menghapus transaksi ${type == 'income' ? 'pemasukan' : 'pengeluaran'} sebesar Rp $amount untuk kategori $category.",
+        date: DateTime.now().toIso8601String(),
+        type: type,
+      );
+
+      // Save log locally
+      await DatabaseHelper.instance.insertLog(logData);
+      // Save log to Firebase (fire and forget)
+      FirebaseDbHelper.instance.insertLog(logData);
+
       await _fetchTransactions();
+      _fetchNotifications();
 
       if (!mounted) return;
       Navigator.pop(context); // Tutup dialog loading
@@ -339,12 +380,10 @@ class _HomePageState extends State<HomePage> {
               child: CircleAvatar(
                 radius: 20,
                 backgroundColor: theme.cardColor,
-                backgroundImage: Preference.photoUrl.isNotEmpty
-                    ? (Preference.photoUrl.startsWith('http')
-                          ? NetworkImage(Preference.photoUrl)
-                          : MemoryImage(base64Decode(Preference.photoUrl))
-                                as ImageProvider)
-                    : const AssetImage("assets/images/orang.jpg"),
+                backgroundImage: _getProfileImageProvider(),
+                child: Preference.photoUrl.isEmpty
+                    ? Icon(Icons.person, color: theme.primaryColor)
+                    : null,
               ),
             ),
           ),
@@ -525,19 +564,16 @@ class _HomePageState extends State<HomePage> {
           UserAccountsDrawerHeader(
             decoration: BoxDecoration(
               color: theme.primaryColor.withOpacity(0.2),
-              image: DecorationImage(
-                fit: BoxFit.cover,
-                colorFilter: ColorFilter.mode(
-                  Colors.black.withOpacity(0.4),
-                  BlendMode.darken,
-                ),
-                image: Preference.photoUrl.isNotEmpty
-                    ? (Preference.photoUrl.startsWith('http')
-                          ? NetworkImage(Preference.photoUrl)
-                          : MemoryImage(base64Decode(Preference.photoUrl))
-                                as ImageProvider)
-                    : const AssetImage("assets/images/orang.jpg"),
-              ),
+              image: Preference.photoUrl.isNotEmpty
+                  ? DecorationImage(
+                      fit: BoxFit.cover,
+                      colorFilter: ColorFilter.mode(
+                        Colors.black.withOpacity(0.4),
+                        BlendMode.darken,
+                      ),
+                      image: _getProfileImageProvider()!,
+                    )
+                  : null,
             ),
             currentAccountPicture: Container(
               decoration: BoxDecoration(
@@ -546,12 +582,10 @@ class _HomePageState extends State<HomePage> {
               ),
               child: CircleAvatar(
                 backgroundColor: theme.scaffoldBackgroundColor.withOpacity(0.5),
-                backgroundImage: Preference.photoUrl.isNotEmpty
-                    ? (Preference.photoUrl.startsWith('http')
-                          ? NetworkImage(Preference.photoUrl)
-                          : MemoryImage(base64Decode(Preference.photoUrl))
-                                as ImageProvider)
-                    : const AssetImage("assets/images/orang.jpg"),
+                backgroundImage: _getProfileImageProvider(),
+                child: Preference.photoUrl.isEmpty
+                    ? Icon(Icons.person, size: 36, color: theme.primaryColor)
+                    : null,
               ),
             ),
             accountName: Text(
@@ -838,7 +872,7 @@ class _HomePageState extends State<HomePage> {
                                           if (isChanged == true)
                                             _fetchTransactions();
                                         } else if (value == 'delete') {
-                                          _deleteTransaction(trx['id']);
+                                          _deleteTransaction(trx);
                                         }
                                       },
                                       itemBuilder: (context) => [

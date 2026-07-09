@@ -5,8 +5,6 @@ import 'package:dukunsaldo_fe/service/finance_analysis_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-// button kelola langgan dan nanti nya di hapus, karna tidak di perlukan
-
 class RecommendationPage extends StatefulWidget {
   final int refreshTrigger;
 
@@ -40,7 +38,6 @@ class _RecommendationPageState extends State<RecommendationPage> {
     List<TransactionModel> transactions = await FirebaseDbHelper.instance
         .getTransactionsByUserId(activeUserId);
 
-    // Jalankan kalkulator rekomendasi
     final data = FinanceAnalysisService.generateRecommendations(transactions);
 
     setState(() {

@@ -1,7 +1,5 @@
 import 'package:dukunsaldo_fe/core/constants/app_assets.dart';
-// import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/features/auth/login.dart';
-// import 'package:dukunsaldo_fe/features/home/home_screen.dart';
 import 'package:dukunsaldo_fe/models/user_model_firebase.dart';
 import 'package:dukunsaldo_fe/service/firebase_auth_service.dart';
 import 'package:flutter/gestures.dart';
@@ -21,7 +19,7 @@ class _RegisterState extends State<Register> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _username = TextEditingController();
-  // final TextEditingController _cityController = TextEditingController();
+
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _isAgreedToTerms = false;
@@ -132,8 +130,16 @@ class _RegisterState extends State<Register> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: Theme.of(context).cardColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text("Syarat & Ketentuan", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            "Syarat & Ketentuan",
+            style: TextStyle(
+              color: Theme.of(context).primaryColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           content: SingleChildScrollView(
             child: Text(
               "Selamat datang di Dukun Saldo.\n\n"
@@ -142,7 +148,11 @@ class _RegisterState extends State<Register> {
               "3. Tanggung Jawab: Kami tidak bertanggung jawab atas kerugian finansial yang diakibatkan oleh keputusan Anda sendiri.\n"
               "4. Perubahan Syarat: Kami berhak mengubah syarat dan ketentuan sewaktu-waktu.\n\n"
               "Dengan menggunakan aplikasi ini, Anda dianggap setuju dengan syarat & ketentuan di atas.",
-              style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 13, height: 1.5),
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+                fontSize: 13,
+                height: 1.5,
+              ),
             ),
           ),
           actions: [
@@ -162,8 +172,16 @@ class _RegisterState extends State<Register> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: Theme.of(context).cardColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text("Kebijakan Privasi", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            "Kebijakan Privasi",
+            style: TextStyle(
+              color: Theme.of(context).primaryColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           content: SingleChildScrollView(
             child: Text(
               "Kebijakan Privasi Dukun Saldo:\n\n"
@@ -172,7 +190,11 @@ class _RegisterState extends State<Register> {
               "3. Transaksi: Data riwayat keuangan Anda dienkripsi (jika tersedia) dan hanya dapat diakses oleh Anda.\n"
               "4. Cookie & Pelacakan: Kami menggunakan sesi sementara untuk menjaga agar Anda tetap masuk.\n\n"
               "Jika Anda memiliki pertanyaan tentang privasi, silakan hubungi tim kami.",
-              style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 13, height: 1.5),
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+                fontSize: 13,
+                height: 1.5,
+              ),
             ),
           ),
           actions: [
@@ -343,21 +365,28 @@ class _RegisterState extends State<Register> {
                                                       ?.copyWith(fontSize: 13),
                                                   children: [
                                                     TextSpan(
-                                                      text: "Syarat & Ketentuan",
+                                                      text:
+                                                          "Syarat & Ketentuan",
                                                       style: TextStyle(
-                                                        color: theme.primaryColor,
-                                                        fontWeight: FontWeight.bold,
+                                                        color:
+                                                            theme.primaryColor,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                       ),
-                                                      recognizer: _termsTapRecognizer,
+                                                      recognizer:
+                                                          _termsTapRecognizer,
                                                     ),
                                                     TextSpan(text: " serta "),
                                                     TextSpan(
                                                       text: "Kebijakan Privasi",
                                                       style: TextStyle(
-                                                        color: theme.primaryColor,
-                                                        fontWeight: FontWeight.bold,
+                                                        color:
+                                                            theme.primaryColor,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                       ),
-                                                      recognizer: _privacyTapRecognizer,
+                                                      recognizer:
+                                                          _privacyTapRecognizer,
                                                     ),
                                                   ],
                                                 ),
