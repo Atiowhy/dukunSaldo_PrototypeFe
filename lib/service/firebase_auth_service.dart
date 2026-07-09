@@ -151,4 +151,23 @@ class FirebaseAuthService {
       throw Exception("Gagal mengupdate ke server database: ${e.toString()}");
     }
   }
+
+  // Hapus Akun
+  Future<bool> deleteAccount() async {
+    try {
+      User? currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        String uid = currentUser.uid;
+        // Hapus data pengguna di Firestore terlebih dahulu
+        await _firestore.collection('users').doc(uid).delete();
+        // Hapus akun dari Firebase Auth
+        await currentUser.delete();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      log("Error delete account: ${e.toString()}");
+      return false;
+    }
+  }
 }

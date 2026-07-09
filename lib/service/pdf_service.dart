@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-import 'package:dukunsaldo_fe/models/summary_model.dart';
 import 'package:dukunsaldo_fe/service/finance_analysis_service.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';

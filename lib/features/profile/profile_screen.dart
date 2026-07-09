@@ -345,9 +345,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (context) => Login()),
+      MaterialPageRoute(builder: (context) => const Login()),
       (route) => false,
     );
+  }
+
+  void _handleDeleteAccount() async {
+    bool confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text("Hapus Akun?", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+        content: Text(
+          "Apakah Anda yakin ingin menghapus akun secara permanen? Semua data profil akan hilang dan tidak dapat dipulihkan.",
+          style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text("Batal", style: TextStyle(color: Theme.of(context).primaryColor)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Hapus", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (confirm) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const CircularProgressIndicator(),
+          ),
+        ),
+      );
+
+      bool success = await FirebaseAuthService().deleteAccount();
+      
+      if (!mounted) return;
+      Navigator.pop(context); // Tutup loading dialog
+
+      if (success) {
+        await Preference.logOut();
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const Login()),
+          (route) => false,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Akun berhasil dihapus permanen."), backgroundColor: Colors.green),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Gagal menghapus akun, mohon relogin dan coba lagi."), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
   }
 
   Widget _buildListTile(
@@ -580,6 +649,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Icons.lock_outline,
                             "Keamanan & PIN",
                             "Protokol biometrik dan 2FA",
+                          ),
+                          _buildListTile(
+                            theme,
+                            Icons.person_remove_alt_1_outlined,
+                            "Hapus Akun",
+                            "Hapus akun secara permanen",
+                            onTap: _handleDeleteAccount,
+                            iconColor: Colors.redAccent,
                           ),
                         ],
                       ),

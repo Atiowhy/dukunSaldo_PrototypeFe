@@ -180,8 +180,8 @@ class _RecommendationPageState extends State<RecommendationPage> {
               description: data.lifestyleSavings > 0
                   ? "Pengeluaran Food & Beverage (termasuk kopi harian) ${data.lifestyleIncreasePercent > 0 ? 'meningkat ${data.lifestyleIncreasePercent.toStringAsFixed(0)}%' : 'mencapai ${formatRupiah(data.lifestyleSavings * 5)}'} bulan ini. Coba batasi jajan di luar minggu ini untuk menghemat ${formatK(data.lifestyleSavings)}."
                   : "Pengeluaran makanan bulan ini masih aman atau belum ada data. Teruskan kebiasaan berhematmu!",
-              btn1Text: "Terapkan Saran",
-              btn2Text: "Ingatkan Saya",
+              // btn1Text: "Terapkan Saran",
+              // btn2Text: "Ingatkan Saya",
             ),
             const SizedBox(height: 16),
 
@@ -199,8 +199,8 @@ class _RecommendationPageState extends State<RecommendationPage> {
               description: data.subscriptionCount > 0
                   ? "Ditemukan ${data.subscriptionCount} langganan layanan digital/streaming yang terdeteksi. Potensi penghematan ${formatK(data.subscriptionSavings)} per bulan jika ada yang dinonaktifkan."
                   : "Belum ada pengeluaran langganan digital yang membebani bulan ini. Pastikan tidak ada auto-debet terselubung!",
-              btn1Text: "Kelola Langganan",
-              btn2Text: "Nanti",
+              // btn1Text: "Kelola Langganan",
+              // btn2Text: "Nanti",
             ),
             const SizedBox(height: 16),
 
@@ -218,76 +218,76 @@ class _RecommendationPageState extends State<RecommendationPage> {
               description: data.savingsTarget > 0
                   ? "Kamu punya potensi surplus saldo bulan ini. Masukkan ${formatK(data.savingsTarget)} ke tabungan darurat untuk capai target lebih cepat."
                   : "Saat ini pengeluaranmu cukup besar dibanding pemasukan bulan ini, atau belum ada surplus. Coba kurangi pengeluaran agar bisa menabung!",
-              btn1Text: "Pindahkan Sekarang",
-              btn2Text: "Ingatkan Besok",
+              // btn1Text: "Pindahkan Sekarang",
+              // btn2Text: "Ingatkan Besok",
             ),
-            const SizedBox(height: 16),
+            // const SizedBox(height: 16),
 
             // --- BOTTOM CARD: POTENSI HEMAT ---
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFF4C9AFF).withOpacity(0.3),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Potensi Hemat",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: theme.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        formatRupiah(data.totalPotentialSavings),
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF00875A),
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 6, left: 4),
-                        child: Text(
-                          "/ bulan",
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: data.totalPotentialSavings > 0
-                          ? data.efficiencyProgress
-                          : 0.0,
-                      backgroundColor: Colors.grey[300],
-                      color: const Color(0xFF00875A),
-                      minHeight: 8,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    data.totalPotentialSavings > 0
-                        ? "${(data.efficiencyProgress * 100).toStringAsFixed(0)}% dari target efisiensi keuangan Anda tercapai."
-                        : "Belum ada cukup data untuk menghitung efisiensi bulan ini.",
-                    style: const TextStyle(color: Colors.grey, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
+            // Container(
+            //   width: double.infinity,
+            //   padding: const EdgeInsets.all(24),
+            //   decoration: BoxDecoration(
+            //     color: theme.cardColor,
+            //     borderRadius: BorderRadius.circular(16),
+            //     border: Border.all(
+            //       color: const Color(0xFF4C9AFF).withOpacity(0.3),
+            //     ),
+            //   ),
+            //   child: Column(
+            //     crossAxisAlignment: CrossAxisAlignment.start,
+            //     children: [
+            //       Text(
+            //         "Potensi Hemat",
+            //         style: TextStyle(
+            //           fontSize: 16,
+            //           fontWeight: FontWeight.bold,
+            //           color: theme.primaryColor,
+            //         ),
+            //       ),
+            //       const SizedBox(height: 12),
+            //       Row(
+            //         crossAxisAlignment: CrossAxisAlignment.end,
+            //         children: [
+            //           Text(
+            //             formatRupiah(data.totalPotentialSavings),
+            //             style: const TextStyle(
+            //               fontSize: 28,
+            //               fontWeight: FontWeight.bold,
+            //               color: Color(0xFF00875A),
+            //             ),
+            //           ),
+            //           const Padding(
+            //             padding: EdgeInsets.only(bottom: 6, left: 4),
+            //             child: Text(
+            //               "/ bulan",
+            //               style: TextStyle(color: Colors.grey, fontSize: 12),
+            //             ),
+            //           ),
+            //         ],
+            //       ),
+            //       const SizedBox(height: 16),
+            //       ClipRRect(
+            //         borderRadius: BorderRadius.circular(10),
+            //         child: LinearProgressIndicator(
+            //           value: data.totalPotentialSavings > 0
+            //               ? data.efficiencyProgress
+            //               : 0.0,
+            //           backgroundColor: Colors.grey[300],
+            //           color: const Color(0xFF00875A),
+            //           minHeight: 8,
+            //         ),
+            //       ),
+            //       const SizedBox(height: 12),
+            //       Text(
+            //         data.totalPotentialSavings > 0
+            //             ? "${(data.efficiencyProgress * 100).toStringAsFixed(0)}% dari target efisiensi keuangan Anda tercapai."
+            //             : "Belum ada cukup data untuk menghitung efisiensi bulan ini.",
+            //         style: const TextStyle(color: Colors.grey, fontSize: 11),
+            //       ),
+            //     ],
+            //   ),
+            // ),
             const SizedBox(height: 32),
           ],
         ),
@@ -308,8 +308,8 @@ class _RecommendationPageState extends State<RecommendationPage> {
     required String badgeText,
     required Color badgeColor,
     required String description,
-    required String btn1Text,
-    required String btn2Text,
+    // required String btn1Text,
+    // required String btn2Text,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -381,57 +381,57 @@ class _RecommendationPageState extends State<RecommendationPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0F1E29),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: () {},
-                      child: Text(
-                        btn1Text,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isDarkMode
-                            ? Colors.grey[800]
-                            : Colors.grey[200],
-                        foregroundColor: theme.primaryColor,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: () {},
-                      child: Text(
-                        btn2Text,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              // Row(
+              //   children: [
+              //     Expanded(
+              //       flex: 3,
+              //       child: ElevatedButton(
+              //         style: ElevatedButton.styleFrom(
+              //           backgroundColor: const Color(0xFF0F1E29),
+              //           foregroundColor: Colors.white,
+              //           elevation: 0,
+              //           shape: RoundedRectangleBorder(
+              //             borderRadius: BorderRadius.circular(8),
+              //           ),
+              //           padding: const EdgeInsets.symmetric(vertical: 12),
+              //         ),
+              //         onPressed: () {},
+              //         // child: Text(
+              //         //   btn1Text,
+              //         //   style: const TextStyle(
+              //         //     fontSize: 12,
+              //         //     fontWeight: FontWeight.bold,
+              //         //   ),
+              //         // ),
+              //       ),
+              //     ),
+              //     const SizedBox(width: 8),
+              //     // Expanded(
+              //     //   flex: 2,
+              //     //   child: ElevatedButton(
+              //     //     style: ElevatedButton.styleFrom(
+              //     //       backgroundColor: isDarkMode
+              //     //           ? Colors.grey[800]
+              //     //           : Colors.grey[200],
+              //     //       foregroundColor: theme.primaryColor,
+              //     //       elevation: 0,
+              //     //       shape: RoundedRectangleBorder(
+              //     //         borderRadius: BorderRadius.circular(8),
+              //     //       ),
+              //     //       padding: const EdgeInsets.symmetric(vertical: 12),
+              //     //     ),
+              //     //     onPressed: () {},
+              //     //     child: Text(
+              //     //       btn2Text,
+              //     //       style: const TextStyle(
+              //     //         fontSize: 12,
+              //     //         fontWeight: FontWeight.bold,
+              //     //       ),
+              //     //     ),
+              //     //   ),
+              //     // ),
+              //   ],
+              // ),
             ],
           ),
         ),

@@ -24,6 +24,8 @@ import '../history/transaction_history_screen.dart';
 import '../prediction(EWS)/prediction_screen.dart';
 import '../recomendation/recomendation_screen.dart';
 
+// tambahin fitur hapus akun
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -258,7 +260,7 @@ class _HomePageState extends State<HomePage> {
             left: 8.0,
           ), // Sejajarkan dengan tepi konten
           child: Text(
-            "Dashboard",
+            ["Dashboard", "Prediksi", "Rekomendasi", "Report"][_selectedIndex],
             style: TextStyle(
               color: theme.primaryColor,
               fontSize: 22,

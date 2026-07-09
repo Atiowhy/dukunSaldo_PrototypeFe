@@ -230,13 +230,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
 
-    // Warna aksen dinamis yang senada dengan Home Screen
-    final primaryAccent = isDarkMode
-        ? AppColors.darkPrimaryButtonColor
-        : AppColors.lightPrimaryButtonColor;
-    final onPrimaryAccent = isDarkMode
-        ? AppColors.darkButtonTextColor
-        : AppColors.lightButtonTextColor;
+    // Warna aksen dinamis yang senada dengan Home Screen (Merah jika pengeluaran)
+    final primaryAccent = _selectedType == "expense"
+        ? Colors.redAccent
+        : (isDarkMode ? AppColors.darkPrimaryButtonColor : AppColors.lightPrimaryButtonColor);
+    final onPrimaryAccent = _selectedType == "expense"
+        ? Colors.white
+        : (isDarkMode ? AppColors.darkButtonTextColor : AppColors.lightButtonTextColor);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -692,16 +692,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 gradient: LinearGradient(
-                  colors: [
-                    AppColors.darkPrimaryButtonColor,
-                    AppColors.lightPrimaryButtonColor,
-                  ],
+                  colors: _selectedType == "expense"
+                      ? [Colors.red.shade700!, Colors.redAccent]
+                      : [
+                          AppColors.darkPrimaryButtonColor,
+                          AppColors.lightPrimaryButtonColor,
+                        ],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.darkPrimaryButtonColor.withOpacity(0.3),
+                    color: (_selectedType == "expense"
+                            ? Colors.redAccent
+                            : AppColors.darkPrimaryButtonColor)
+                        .withOpacity(0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
