@@ -1,15 +1,22 @@
 import 'package:dukunsaldo_fe/core/constants/app_assets.dart';
 import 'package:dukunsaldo_fe/database/db_helper.dart';
+import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 // import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/features/auth/register.dart';
 import 'package:dukunsaldo_fe/features/home/home_screen.dart';
+import 'package:dukunsaldo_fe/models/log_model.dart';
 // import 'package:dukunsaldo_fe/features/home/home_screen.dart';
 import 'package:dukunsaldo_fe/models/model_users.dart';
+import 'package:dukunsaldo_fe/service/firebase_auth_service.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import '../../core/widgets/custom_text_field.dart';
+
 import '../../core/widgets/custom_button.dart';
+import '../../core/widgets/custom_text_field.dart';
+
+//lupa kata sandi di kecilin lalu letakkan dibawah kolom password
+//term and conditions
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -21,7 +28,6 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  // final TextEditingController _cityController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
@@ -36,19 +42,48 @@ class _LoginState extends State<Login> {
       return;
     }
 
-    final pengguna = await DatabaseHelper.instance.loginUser(
-      UserModelSql(email: email, password: pass, username: ''),
-    );
+    setState(() {
+      _isLoading = true;
+    });
 
-    // Cek apakah widget masih terpasang (mounted) sebelum menggunakan context
+    final authService = FirebaseAuthService();
+    final pengguna = await authService.signIn(email, pass);
+
+    if (pengguna != null) {
+      await DatabaseHelper.instance.registerUser(
+        UserModelSql(
+          id: pengguna.id,
+          username: pengguna.username,
+          email: pengguna.email,
+          password: pengguna.password,
+        ),
+      );
+    }
+
     if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
 
     if (pengguna != null) {
       await Preference.saveUserSession(
         pengguna.id!,
         pengguna.username,
         pengguna.email,
+        pengguna.photoUrl,
       );
+
+      final logData = LogModel(
+        userId: pengguna.id!,
+        title: "Login Berhasil",
+        message: "Selamat datang kembali, ${pengguna.username}!",
+        date: DateTime.now().toIso8601String(),
+        type: 'system',
+      );
+      await DatabaseHelper.instance.insertLog(logData);
+      await FirebaseDbHelper.instance.insertLog(logData);
+
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,

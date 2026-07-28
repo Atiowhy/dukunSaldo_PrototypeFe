@@ -6,6 +6,7 @@ class SummaryModel {
   final double currentBalance;
   final List<FlSpot> realChartSpots;
   final List<FlSpot> predictChartSpots;
+  final List<String> chartLabels;
 
   SummaryModel({
     required this.totalIncome,
@@ -13,5 +14,6 @@ class SummaryModel {
     required this.currentBalance,
     required this.realChartSpots,
     required this.predictChartSpots,
+    required this.chartLabels,
   });
 }

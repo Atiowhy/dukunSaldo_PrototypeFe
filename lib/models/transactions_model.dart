@@ -6,6 +6,7 @@ class TransactionModel {
   final double amount;
   final String type; // 'income' atau 'expense'
   final String date;
+  final bool isSubscription;
 
   TransactionModel({
     this.id,
@@ -15,6 +16,7 @@ class TransactionModel {
     required this.amount,
     required this.type,
     required this.date,
+    this.isSubscription = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +28,7 @@ class TransactionModel {
       'amount': amount,
       'type': type,
       'date': date,
+      'isSubscription': isSubscription ? 1 : 0,
     };
   }
 
@@ -38,6 +41,7 @@ class TransactionModel {
       amount: (map['amount'] as num).toDouble(),
       type: map['type'],
       date: map['date'],
+      isSubscription: map['isSubscription'] == 1,
     );
   }
 }

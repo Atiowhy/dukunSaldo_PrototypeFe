@@ -1,4 +1,4 @@
-import 'package:dukunsaldo_fe/database/db_helper.dart';
+import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/models/transactions_model.dart';
 import 'package:dukunsaldo_fe/service/finance_analysis_service.dart';
@@ -35,19 +35,9 @@ class _RecommendationPageState extends State<RecommendationPage> {
 
   Future<void> _fetchAndAnalyzeData() async {
     int activeUserId = Preference.userId;
-    final db = await DatabaseHelper.instance.database;
+    List<TransactionModel> transactions = await FirebaseDbHelper.instance
+        .getTransactionsByUserId(activeUserId);
 
-    final List<Map<String, dynamic>> maps = await db.query(
-      'transactions',
-      where: 'userId = ?',
-      whereArgs: [activeUserId],
-    );
-
-    List<TransactionModel> transactions = maps
-        .map((e) => TransactionModel.fromMap(e))
-        .toList();
-
-    // Jalankan kalkulator rekomendasi
     final data = FinanceAnalysisService.generateRecommendations(transactions);
 
     setState(() {
@@ -84,7 +74,12 @@ class _RecommendationPageState extends State<RecommendationPage> {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 16,
+          bottom: 120,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -126,7 +121,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Text(
-                          "AI Powered",
+                          "DES Powered",
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -179,10 +174,11 @@ class _RecommendationPageState extends State<RecommendationPage> {
               title: "Gaya Hidup",
               badgeText: "Urgent",
               badgeColor: const Color(0xFFA00000),
-              description:
-                  "Pengeluaran Food & Beverage (termasuk kopi harian) ${data.lifestyleIncreasePercent > 0 ? 'meningkat ${data.lifestyleIncreasePercent.toStringAsFixed(0)}%' : 'mencapai ${formatRupiah(data.lifestyleSavings * 5)}'} bulan ini. Coba batasi jajan di luar minggu ini untuk menghemat ${formatK(data.lifestyleSavings > 0 ? data.lifestyleSavings : 150000)}.",
-              btn1Text: "Terapkan Saran",
-              btn2Text: "Ingatkan Saya",
+              description: data.lifestyleSavings > 0
+                  ? "Pengeluaran Food & Beverage (termasuk kopi harian) ${data.lifestyleIncreasePercent > 0 ? 'meningkat ${data.lifestyleIncreasePercent.toStringAsFixed(0)}%' : 'mencapai ${formatRupiah(data.lifestyleSavings * 5)}'} bulan ini. Coba batasi jajan di luar minggu ini untuk menghemat ${formatK(data.lifestyleSavings)}."
+                  : "Pengeluaran makanan bulan ini masih aman atau belum ada data. Teruskan kebiasaan berhematmu!",
+              // btn1Text: "Terapkan Saran",
+              // btn2Text: "Ingatkan Saya",
             ),
             const SizedBox(height: 16),
 
@@ -197,10 +193,11 @@ class _RecommendationPageState extends State<RecommendationPage> {
               title: "Subscription Management",
               badgeText: "Optimasi",
               badgeColor: const Color(0xFF5A6B82),
-              description:
-                  "Ditemukan ${data.subscriptionCount} langganan layanan digital/streaming yang terdeteksi. Potensi penghematan ${formatK(data.subscriptionSavings > 0 ? data.subscriptionSavings : 75000)} per bulan jika ada yang dinonaktifkan.",
-              btn1Text: "Kelola Langganan",
-              btn2Text: "Nanti",
+              description: data.subscriptionCount > 0
+                  ? "Ditemukan ${data.subscriptionCount} langganan layanan digital/streaming yang terdeteksi. Potensi penghematan ${formatK(data.subscriptionSavings)} per bulan jika ada yang dinonaktifkan."
+                  : "Belum ada pengeluaran langganan digital yang membebani bulan ini. Pastikan tidak ada auto-debet terselubung!",
+              // btn1Text: "Kelola Langganan",
+              // btn2Text: "Nanti",
             ),
             const SizedBox(height: 16),
 
@@ -215,80 +212,79 @@ class _RecommendationPageState extends State<RecommendationPage> {
               title: "Tabungan",
               badgeText: "Growth",
               badgeColor: const Color(0xFF005E2D),
-              description:
-                  "Kamu punya potensi surplus saldo bulan ini. Masukkan ${formatK(data.savingsTarget > 0 ? data.savingsTarget : 500000)} ke tabungan darurat untuk capai target lebih cepat.",
-              btn1Text: "Pindahkan Sekarang",
-              btn2Text: "Ingatkan Besok",
+              description: data.savingsTarget > 0
+                  ? "Kamu punya potensi surplus saldo bulan ini. Masukkan ${formatK(data.savingsTarget)} ke tabungan darurat untuk capai target lebih cepat."
+                  : "Saat ini pengeluaranmu cukup besar dibanding pemasukan bulan ini, atau belum ada surplus. Coba kurangi pengeluaran agar bisa menabung!",
+              // btn1Text: "Pindahkan Sekarang",
+              // btn2Text: "Ingatkan Besok",
             ),
-            const SizedBox(height: 16),
+            // const SizedBox(height: 16),
 
             // --- BOTTOM CARD: POTENSI HEMAT ---
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFF4C9AFF).withOpacity(0.3),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Potensi Hemat",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: theme.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        formatRupiah(
-                          data.totalPotentialSavings > 0
-                              ? data.totalPotentialSavings
-                              : 899000,
-                        ),
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF00875A),
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 6, left: 4),
-                        child: Text(
-                          "/ bulan",
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: data.efficiencyProgress > 0
-                          ? data.efficiencyProgress
-                          : 0.65, // Default 65% jika kosong
-                      backgroundColor: Colors.grey[300],
-                      color: const Color(0xFF00875A),
-                      minHeight: 8,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    "${((data.efficiencyProgress > 0 ? data.efficiencyProgress : 0.65) * 100).toStringAsFixed(0)}% dari target efisiensi keuangan Anda tercapai.",
-                    style: const TextStyle(color: Colors.grey, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
+            // Container(
+            //   width: double.infinity,
+            //   padding: const EdgeInsets.all(24),
+            //   decoration: BoxDecoration(
+            //     color: theme.cardColor,
+            //     borderRadius: BorderRadius.circular(16),
+            //     border: Border.all(
+            //       color: const Color(0xFF4C9AFF).withOpacity(0.3),
+            //     ),
+            //   ),
+            //   child: Column(
+            //     crossAxisAlignment: CrossAxisAlignment.start,
+            //     children: [
+            //       Text(
+            //         "Potensi Hemat",
+            //         style: TextStyle(
+            //           fontSize: 16,
+            //           fontWeight: FontWeight.bold,
+            //           color: theme.primaryColor,
+            //         ),
+            //       ),
+            //       const SizedBox(height: 12),
+            //       Row(
+            //         crossAxisAlignment: CrossAxisAlignment.end,
+            //         children: [
+            //           Text(
+            //             formatRupiah(data.totalPotentialSavings),
+            //             style: const TextStyle(
+            //               fontSize: 28,
+            //               fontWeight: FontWeight.bold,
+            //               color: Color(0xFF00875A),
+            //             ),
+            //           ),
+            //           const Padding(
+            //             padding: EdgeInsets.only(bottom: 6, left: 4),
+            //             child: Text(
+            //               "/ bulan",
+            //               style: TextStyle(color: Colors.grey, fontSize: 12),
+            //             ),
+            //           ),
+            //         ],
+            //       ),
+            //       const SizedBox(height: 16),
+            //       ClipRRect(
+            //         borderRadius: BorderRadius.circular(10),
+            //         child: LinearProgressIndicator(
+            //           value: data.totalPotentialSavings > 0
+            //               ? data.efficiencyProgress
+            //               : 0.0,
+            //           backgroundColor: Colors.grey[300],
+            //           color: const Color(0xFF00875A),
+            //           minHeight: 8,
+            //         ),
+            //       ),
+            //       const SizedBox(height: 12),
+            //       Text(
+            //         data.totalPotentialSavings > 0
+            //             ? "${(data.efficiencyProgress * 100).toStringAsFixed(0)}% dari target efisiensi keuangan Anda tercapai."
+            //             : "Belum ada cukup data untuk menghitung efisiensi bulan ini.",
+            //         style: const TextStyle(color: Colors.grey, fontSize: 11),
+            //       ),
+            //     ],
+            //   ),
+            // ),
             const SizedBox(height: 32),
           ],
         ),
@@ -309,8 +305,8 @@ class _RecommendationPageState extends State<RecommendationPage> {
     required String badgeText,
     required Color badgeColor,
     required String description,
-    required String btn1Text,
-    required String btn2Text,
+    // required String btn1Text,
+    // required String btn2Text,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -382,57 +378,57 @@ class _RecommendationPageState extends State<RecommendationPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0F1E29),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: () {},
-                      child: Text(
-                        btn1Text,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isDarkMode
-                            ? Colors.grey[800]
-                            : Colors.grey[200],
-                        foregroundColor: theme.primaryColor,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: () {},
-                      child: Text(
-                        btn2Text,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              // Row(
+              //   children: [
+              //     Expanded(
+              //       flex: 3,
+              //       child: ElevatedButton(
+              //         style: ElevatedButton.styleFrom(
+              //           backgroundColor: const Color(0xFF0F1E29),
+              //           foregroundColor: Colors.white,
+              //           elevation: 0,
+              //           shape: RoundedRectangleBorder(
+              //             borderRadius: BorderRadius.circular(8),
+              //           ),
+              //           padding: const EdgeInsets.symmetric(vertical: 12),
+              //         ),
+              //         onPressed: () {},
+              //         // child: Text(
+              //         //   btn1Text,
+              //         //   style: const TextStyle(
+              //         //     fontSize: 12,
+              //         //     fontWeight: FontWeight.bold,
+              //         //   ),
+              //         // ),
+              //       ),
+              //     ),
+              //     const SizedBox(width: 8),
+              //     // Expanded(
+              //     //   flex: 2,
+              //     //   child: ElevatedButton(
+              //     //     style: ElevatedButton.styleFrom(
+              //     //       backgroundColor: isDarkMode
+              //     //           ? Colors.grey[800]
+              //     //           : Colors.grey[200],
+              //     //       foregroundColor: theme.primaryColor,
+              //     //       elevation: 0,
+              //     //       shape: RoundedRectangleBorder(
+              //     //         borderRadius: BorderRadius.circular(8),
+              //     //       ),
+              //     //       padding: const EdgeInsets.symmetric(vertical: 12),
+              //     //     ),
+              //     //     onPressed: () {},
+              //     //     child: Text(
+              //     //       btn2Text,
+              //     //       style: const TextStyle(
+              //     //         fontSize: 12,
+              //     //         fontWeight: FontWeight.bold,
+              //     //       ),
+              //     //     ),
+              //     //   ),
+              //     // ),
+              //   ],
+              // ),
             ],
           ),
         ),

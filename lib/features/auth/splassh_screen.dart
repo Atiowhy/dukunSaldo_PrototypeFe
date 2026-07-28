@@ -1,9 +1,12 @@
+import 'dart:ui';
 import 'package:dukunsaldo_fe/core/constants/app_assets.dart';
 import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:dukunsaldo_fe/features/auth/login.dart';
 import 'package:dukunsaldo_fe/features/home/home_screen.dart';
-// import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
+import 'package:dukunsaldo_fe/features/onboarding/onboarding_screen.dart';
+import 'package:dukunsaldo_fe/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -23,7 +26,13 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(seconds: 3));
 
     if (!mounted) return;
-    if (!Preference.isLogin) {
+    
+    if (!Preference.hasSeenOnboarding) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+      );
+    } else if (!Preference.isLogin) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const Login()),
@@ -39,61 +48,237 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
+    // Warna aksen untuk gradient/blob
+    final primaryAccent = isDarkMode
+        ? AppColors.darkPrimaryButtonColor
+        : AppColors.lightPrimaryButtonColor;
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: Column(
+      body: Stack(
         children: [
-          // logo
-          Container(
-            padding: EdgeInsets.only(top: 40, left: 20, bottom: 8, right: 20),
-
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(AppAssets.logo, width: 32, height: 32),
-                SizedBox(width: 8),
-                Text(
-                  "DUKUN SALDO",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ],
+          // ==============================
+          // BACKGROUND ABSTRACT BLOBS
+          // ==============================
+          Positioned(
+            top: -100,
+            left: -100,
+            child: Container(
+              width: 350,
+              height: 350,
+              decoration: BoxDecoration(
+                color: primaryAccent.withOpacity(isDarkMode ? 0.2 : 0.4),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -50,
+            right: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                color: const Color(
+                  0xFF00875A,
+                ).withOpacity(isDarkMode ? 0.3 : 0.5),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).size.height * 0.4,
+            right: -50,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                color: const Color(
+                  0xFF4C9AFF,
+                ).withOpacity(isDarkMode ? 0.2 : 0.4),
+                shape: BoxShape.circle,
+              ),
             ),
           ),
 
-          SizedBox(height: 100),
-          // image splash
-          Container(
-            padding: EdgeInsets.only(bottom: 32),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+          // ==============================
+          // SMOKE EFFECT (ASAP)
+          // ==============================
+          ...List.generate(6, (index) {
+            final isEven = index % 2 == 0;
+            final delay = index * 400;
+            final duration = 3000 + (index * 200);
+            return Positioned(
+              bottom: -50,
+              left: 50.0 + (index * 40),
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDarkMode
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.black.withOpacity(0.05),
+                ),
+              )
+                  .animate(
+                    onPlay: (controller) => controller.repeat(),
+                    delay: delay.ms,
+                  )
+                  .moveY(
+                    begin: 0,
+                    end: -MediaQuery.of(context).size.height * 0.7,
+                    duration: duration.ms,
+                    curve: Curves.easeOut,
+                  )
+                  .moveX(
+                    begin: 0,
+                    end: isEven ? 100 : -100,
+                    duration: duration.ms,
+                    curve: Curves.easeInOutSine,
+                  )
+                  .scale(
+                    begin: const Offset(0.5, 0.5),
+                    end: const Offset(4.0, 4.0),
+                    duration: duration.ms,
+                  )
+                  .fade(
+                    begin: 0.8,
+                    end: 0.0,
+                    duration: duration.ms,
+                    curve: Curves.easeOut,
+                  ),
+            );
+          }),
+
+          // ==============================
+          // GLASSMORPHISM BLUR LAYER
+          // ==============================
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 60.0, sigmaY: 60.0),
+              child: Container(
+                color: theme.scaffoldBackgroundColor.withOpacity(0.6),
+              ),
+            ),
+          ),
+
+          // ==============================
+          // FOREGROUND CONTENT
+          // ==============================
+          SafeArea(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    AppAssets.splash,
-                    width: 320,
-                    height: 320,
-                    fit: BoxFit.cover,
+                // Bagian Atas: Logo
+                Padding(
+                  padding: const EdgeInsets.only(top: 40),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Image.asset(
+                          AppAssets.logo,
+                          width: 32,
+                          height: 32,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        "DUKUN SALDO",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2,
+                          color: theme.primaryColor,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          // title
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-                Text(
-                  "Kendalikan Masa Depan Finansial Anda",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+
+                // Bagian Tengah: Ilustrasi
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.symmetric(horizontal: 40),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(isDarkMode ? 0.05 : 0.4),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(isDarkMode ? 0.1 : 0.5),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 24,
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.asset(
+                      AppAssets.splash,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
-                SizedBox(height: 16),
-                Text(
-                  "Prediksi arus kas cerdas dengan algoritma DES dan sistem peringatan dini (EWS) untuk keamanan dana Anda",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight(400)),
+
+                // Bagian Bawah: Teks & Loading
+                Padding(
+                  padding: const EdgeInsets.only(
+                    bottom: 60,
+                    left: 32,
+                    right: 32,
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        "Kendalikan Masa Depan Finansial Anda",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          height: 1.2,
+                          color: theme.primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "Prediksi arus kas cerdas dengan algoritma DES dan sistem peringatan dini (EWS) untuk keamanan dana Anda.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          height: 1.5,
+                          color: theme.textTheme.bodyMedium?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 48),
+                      // Indikator Loading Custom
+                      SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            primaryAccent,
+                          ),
+                          strokeWidth: 3,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

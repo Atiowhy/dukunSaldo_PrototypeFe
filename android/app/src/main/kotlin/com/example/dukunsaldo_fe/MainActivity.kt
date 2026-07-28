@@ -1,4 +1,4 @@
-package com.example.dukunsaldo_fe
+package com.yows.dukunsaldo_fe
 
 import io.flutter.embedding.android.FlutterActivity
 

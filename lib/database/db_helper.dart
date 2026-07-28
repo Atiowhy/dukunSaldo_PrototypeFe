@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:dukunsaldo_fe/models/model_users.dart';
 import 'package:dukunsaldo_fe/models/transactions_model.dart';
+import 'package:dukunsaldo_fe/models/log_model.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -21,7 +22,34 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      path, 
+      version: 3, 
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = OFF');
+      },
+      onCreate: _createDB,
+      onUpgrade: _onUpgrade,
+    );
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE logs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          userId INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          message TEXT NOT NULL,
+          date TEXT NOT NULL,
+          type TEXT NOT NULL,
+          FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
+        )
+      ''');
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE transactions ADD COLUMN isSubscription INTEGER DEFAULT 0');
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -44,7 +72,22 @@ class DatabaseHelper {
         category TEXT NOT NULL,
         amount REAL NOT NULL,
         type TEXT NOT NULL,
-        date TEXT NOT NULL
+        date TEXT NOT NULL,
+        isSubscription INTEGER DEFAULT 0,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
+      )
+    ''');
+
+    // 3. BUAT TABEL LOGS (Untuk Notifikasi)
+    await db.execute('''
+      CREATE TABLE logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        date TEXT NOT NULL,
+        type TEXT NOT NULL,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
   }
@@ -60,11 +103,11 @@ class DatabaseHelper {
     return result.isNotEmpty;
   }
 
-  // fungsi buat register
+  // fungsi buat register / sync user
   Future<bool> registerUser(UserModelSql user) async {
     final db = await instance.database;
     try {
-      await db.insert("users", user.toMap());
+      await db.insert("users", user.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
       return true;
     } catch (e) {
       log(e.toString());
@@ -159,6 +202,7 @@ class DatabaseHelper {
     final List<Map<String, dynamic>> results = await db.query(
       "transactions",
       where: 'userId = ?',
+      whereArgs: [userId],
       orderBy: 'id DESC',
     );
     return results.map((map) => TransactionModel.fromMap(map)).toList();
@@ -179,5 +223,29 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [transaction.id],
     );
+  }
+
+  // ===================== LOGS =====================
+  Future<bool> insertLog(LogModel logData) async {
+    final db = await database;
+    try {
+      await db.insert('logs', logData.toMap());
+      return true;
+    } catch (e) {
+      log("Error insert log: ${e.toString()}");
+      return false;
+    }
+  }
+
+  Future<List<LogModel>> getLogsByUserId(int userId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> results = await db.query(
+      'logs',
+      where: 'userId = ?',
+      whereArgs: [userId],
+      orderBy: 'id DESC', // Urutkan dari yang terbaru
+    );
+
+    return results.map((map) => LogModel.fromMap(map)).toList();
   }
 }

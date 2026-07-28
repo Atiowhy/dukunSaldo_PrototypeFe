@@ -1,5 +1,8 @@
+import 'package:dukunsaldo_fe/database/firebase_db_helper.dart';
+import 'package:dukunsaldo_fe/database/preference.dart';
 import 'package:flutter/material.dart';
-import '../../../database/db_helper.dart';
+import 'package:intl/intl.dart';
+
 import '../../../models/transactions_model.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
@@ -14,33 +17,88 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   String _selectedCategory = "Semua";
 
   List<TransactionModel> _allTransactions = [];
+  final List<dynamic> _listItems = [];
   bool _isLoading = true;
 
   final List<String> _kategoryList = [
     "Semua",
     "Pengeluaran",
     "Pemasukkan",
-    "Food",
-    "Transport",
-    "Digital",
-    "Shopping",
+    "Makanan",
+    "Transportasi",
+    "Belanja",
+    "Tagihan",
   ];
 
   @override
   void initState() {
     super.initState();
-    _loadHistoryData();
+    _fetchTransactions();
   }
 
-  Future<void> _loadHistoryData() async {
+  Future<void> _fetchTransactions() async {
     setState(() => _isLoading = true);
-    final data = await DatabaseHelper.instance.getAllTransactions();
+    final data = await FirebaseDbHelper.instance.getTransactionsByUserId(
+      Preference.userId,
+    );
+    // Urutkan berdasarkan tanggal input user (descending)
+    data.sort((a, b) {
+      final dateA =
+          DateTime.tryParse(a.date) ??
+          DateTime.fromMillisecondsSinceEpoch(a.id ?? 0);
+      final dateB =
+          DateTime.tryParse(b.date) ??
+          DateTime.fromMillisecondsSinceEpoch(b.id ?? 0);
+      return dateB.compareTo(dateA);
+    });
+
+    if (!mounted) return;
     setState(() {
       _allTransactions = data;
       _isLoading = false;
+      _applyFilters();
     });
   }
 
+  // logic filter kategori riwayat transaksi
+  void _applyFilters() {
+    setState(() {
+      final filtered = _allTransactions.where((trx) {
+        if (_selectedCategory == "Semua") return true;
+
+        if (_selectedCategory == "Pemasukkan") {
+          return trx.type == "income";
+        }
+        if (_selectedCategory == "Pengeluaran") {
+          return trx.type == "expense";
+        }
+
+        return trx.category.toLowerCase() == _selectedCategory.toLowerCase();
+      }).toList();
+
+      _listItems.clear();
+      String currentMonth = "";
+
+      for (var trx in filtered) {
+        try {
+          final date = DateTime.parse(trx.date);
+          final monthStr = DateFormat('MMMM yyyy', 'id_ID').format(date);
+          if (monthStr != currentMonth) {
+            currentMonth = monthStr;
+            _listItems.add(monthStr); // Tambahkan header bulan
+          }
+        } catch (e) {
+          if (currentMonth != "Lainnya") {
+            currentMonth = "Lainnya";
+            _listItems.add(currentMonth);
+          }
+        }
+        _listItems.add(trx);
+      }
+    });
+  }
+
+  // fungsi format Rupiah
   String formatRupiah(int amount) {
     return amount.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
@@ -52,19 +110,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
-
-    final filteredTransactions = _allTransactions.where((trx) {
-      if (_selectedCategory == "Semua") return true;
-
-      if (_selectedCategory == "Pemasukkan") {
-        return trx.type == "income";
-      }
-      if (_selectedCategory == "Pengeluaran") {
-        return trx.type == "expense";
-      }
-
-      return trx.category.toLowerCase() == _selectedCategory.toLowerCase();
-    }).toList();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -103,6 +148,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                             onTap: () {
                               setState(() {
                                 _selectedCategory = kategori;
+                                _applyFilters();
                               });
                             },
                             child: AnimatedContainer(
@@ -148,11 +194,38 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 const SizedBox(height: 8),
 
                 Expanded(
-                  child: filteredTransactions.isEmpty
+                  child: _listItems.isEmpty
                       ? Center(
-                          child: Text(
-                            "Tidak ada transaksi di kategori ini.",
-                            style: theme.textTheme.bodyMedium,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  color: theme.dividerColor.withOpacity(0.3),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.receipt_long_outlined,
+                                  size: 64,
+                                  color: theme.dividerColor,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              Text(
+                                "Tidak ada transaksi",
+                                style: TextStyle(
+                                  color: theme.primaryColor,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Belum ada transaksi di kategori ini.",
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ],
                           ),
                         )
                       : ListView.builder(
@@ -161,10 +234,28 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                             vertical: 16,
                           ),
                           physics: const BouncingScrollPhysics(),
-                          itemCount: filteredTransactions.length,
+                          itemCount: _listItems.length,
                           itemBuilder: (context, index) {
-                            final trx = filteredTransactions[index];
+                            final item = _listItems[index];
 
+                            if (item is String) {
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8,
+                                  bottom: 16,
+                                ),
+                                child: Text(
+                                  item,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.primaryColor,
+                                  ),
+                                ),
+                              );
+                            }
+
+                            final trx = item as TransactionModel;
                             final bool isIncome = trx.type == "income";
 
                             return Container(
@@ -206,6 +297,30 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                           trx.category,
                                           style: theme.textTheme.bodyMedium
                                               ?.copyWith(fontSize: 13),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          (() {
+                                            try {
+                                              return DateFormat(
+                                                'dd MMM yyyy',
+                                                'id_ID',
+                                              ).format(
+                                                DateTime.parse(trx.date),
+                                              );
+                                            } catch (e) {
+                                              return trx.date;
+                                            }
+                                          })(),
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                fontSize: 11,
+                                                color: theme
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.color
+                                                    ?.withOpacity(0.6),
+                                              ),
                                         ),
                                       ],
                                     ),
