@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "226520680648",
+    "project_id": "dukun-saldo",
+    "storage_bucket": "dukun-saldo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:226520680648:android:32ad803d093b19f9fa7dfd",
+        "android_client_info": {
+          "package_name": "com.yows.dukunsaldo_fe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAx4ro6OrYZ6EtllrgXQ_f8W4jxM7IZQvE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

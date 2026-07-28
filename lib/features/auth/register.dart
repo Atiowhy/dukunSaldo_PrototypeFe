@@ -53,6 +53,7 @@ class _RegisterState extends State<Register> {
       ).showSnackBar(const SnackBar(content: Text('Akun berhasil dibuat')));
       // Panggil ini setelah proses insert selesai
       await DatabaseHelper.instance.checkUsersData();
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => Login()),

@@ -49,6 +49,7 @@ class _LoginState extends State<Login> {
         pengguna.username,
         pengguna.email,
       );
+      if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => HomePage()),
